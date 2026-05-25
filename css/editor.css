@@ -1,0 +1,749 @@
+/* =====================================================================
+ * PyQuiz — editor (teacher-only) styles
+ *
+ * Loaded by teacher.html only. Contains form styling, the bespoke
+ * line-editor used by the parsons editor, validation issue list,
+ * save-status pill, JSON edit textarea, activity cards in the drafts
+ * dialog and the tab bar above the editor.
+ * ===================================================================== */
+
+/* Form — compact two-column layout (narrow label gutter, wide control).
+   Smaller font and tighter padding than the modal form to keep the
+   activity editor scannable without lots of scrolling. */
+.form-row {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 10px 14px;
+  align-items: start;
+  margin-bottom: 8px;
+  font-size: 0.92em;
+}
+.form-row > label {
+  font-weight: 500;
+  padding-top: 6px;
+  font-size: 0.92em;
+  color: var(--fg);
+}
+.form-row input[type="text"],
+.form-row input[type="number"],
+.form-row select,
+.form-row textarea {
+  width: 100%;
+  padding: 6px 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--panel);
+  /* Without an explicit color the browser falls back to its native
+     black, which in dark and HC themes is unreadable on the dark
+     panel background. */
+  color: var(--fg);
+  font: inherit;
+  font-family: inherit;
+  font-size: 0.95em;
+}
+.form-row textarea {
+  font-family: var(--font-mono);
+  min-height: 70px;
+  resize: vertical;
+}
+.form-row .row-flex { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.form-hint {
+  grid-column: 2;
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 0.82em;
+  line-height: 1.4;
+}
+/* Inline variant — label and control on one line for short controls
+   like checkboxes or single radio rows. */
+.form-row-inline {
+  grid-template-columns: 160px auto;
+  align-items: center;
+}
+.form-checkbox-wrap {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  gap: 8px;
+}
+
+/* Radio pill group used for short option sets (mode, direction, etc).
+   Mirrors the look of the settings dialog so the entire teacher UI
+   feels consistent. */
+.form-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.form-radio-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--panel);
+  cursor: pointer;
+  font-size: 0.88em;
+  user-select: none;
+  white-space: nowrap;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+.form-radio-pill input[type="radio"] {
+  margin: 0;
+  accent-color: var(--accent);
+}
+.form-radio-pill:hover {
+  background: var(--panel-2);
+  border-color: var(--accent);
+}
+.form-radio-pill:has(input:checked) {
+  background: color-mix(in srgb, var(--accent) 16%, var(--panel));
+  border-color: var(--accent);
+}
+@supports not (selector(:has(*))) {
+  .form-radio-pill input[type="radio"]:checked + span { font-weight: 600; }
+}
+[data-theme="dark"] .form-radio-pill:has(input:checked) {
+  background: #1F3A5E;
+}
+
+/* Colour swatch picker — eight presets plus a "default" option that
+   clears the override. The picked swatch shows a ring. */
+.form-swatch-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.form-swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  cursor: pointer;
+  padding: 0;
+  background: var(--panel);
+  position: relative;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.form-swatch:hover { transform: scale(1.08); }
+.form-swatch.is-selected {
+  /* Inner light ring + outer dark ring so the selection is visible
+     against any swatch colour. */
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--fg);
+}
+.form-swatch-clear {
+  background:
+    linear-gradient(135deg, transparent calc(50% - 1px), var(--bad) calc(50% - 1px),
+                   var(--bad) calc(50% + 1px), transparent calc(50% + 1px)),
+    var(--panel);
+}
+
+/* Code editor — textarea overlaid on a syntax-highlighted <pre>, with
+   a line-number gutter on the left. The two layers share font metrics
+   so the highlight aligns under the typing caret. */
+.code-editor {
+  display: flex;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--panel);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow: hidden;
+  /* Reserve a sensible minimum height so the editor is usable from the
+     first character; expands as content grows. */
+  min-height: 140px;
+}
+.code-editor-gutter {
+  flex-shrink: 0;
+  width: 38px;
+  padding: 8px 6px 8px 0;
+  text-align: right;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--fg) 5%, var(--panel));
+  border-right: 1px solid var(--border);
+  line-height: 1.55;
+  white-space: pre;
+  overflow: hidden;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .code-editor-gutter { background: var(--panel-2); }
+}
+.code-editor-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.code-editor-highlight,
+.code-editor-input {
+  margin: 0;
+  padding: 8px 10px;
+  border: 0;
+  font-family: var(--font-mono);
+  font-size: inherit;
+  line-height: 1.55;
+  white-space: pre;
+  tab-size: 4;
+  -moz-tab-size: 4;
+  word-wrap: normal;
+  overflow: auto;
+}
+.code-editor-highlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: transparent;
+  color: var(--fg);
+}
+.code-editor-highlight code { font-family: inherit; }
+.code-editor-input,
+.main .code-editor-input,
+.main textarea.code-editor-input,
+.form-row .code-editor-input,
+.form-row textarea.code-editor-input {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 140px;
+  resize: vertical;
+  /* Critical: transparent background so the syntax-highlighted <pre>
+     overlay underneath shows through. Multiple selectors stacked
+     because both `.main textarea` (in editor.css) and `.form-row
+     textarea` set a panel background at higher specificity than the
+     single-class `.code-editor-input` rule on its own would. */
+  background: transparent;
+  background-color: transparent;
+  /* Hide the literal text — the highlighted layer shows it instead. The
+     caret stays visible thanks to `caret-color`. */
+  color: transparent;
+  caret-color: var(--fg);
+  outline: none;
+  border: 0;
+}
+.code-editor-input::selection {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+/* Token colours — chosen for AA contrast on the cream panel background. */
+.tok-keyword { color: #7B2D6B; font-weight: 600; }
+.tok-builtin { color: #0F6E84; }
+.tok-string  { color: #1E6E3C; }
+.tok-number  { color: #B12A38; }
+.tok-comment { color: #6B6357; font-style: italic; }
+.tok-op      { color: #444; }
+
+[data-theme="dark"] .code-editor { background: var(--panel-2); }
+[data-theme="dark"] .code-editor-gutter { background: var(--panel); }
+[data-theme="dark"] .tok-keyword { color: #C792EA; }
+[data-theme="dark"] .tok-builtin { color: #82AAFF; }
+[data-theme="dark"] .tok-string  { color: #A5E075; }
+[data-theme="dark"] .tok-number  { color: #F78C6C; }
+[data-theme="dark"] .tok-comment { color: #8A8682; }
+[data-theme="dark"] .tok-op      { color: #C0C5CE; }
+
+[data-theme="hc"] .code-editor { background: #000000; border-color: var(--fg); }
+[data-theme="hc"] .code-editor-input { color: transparent; caret-color: var(--fg); }
+[data-theme="hc"] .code-editor-highlight { color: var(--fg); }
+[data-theme="hc"] .tok-keyword,
+[data-theme="hc"] .tok-builtin,
+[data-theme="hc"] .tok-string,
+[data-theme="hc"] .tok-number,
+[data-theme="hc"] .tok-comment,
+[data-theme="hc"] .tok-op { color: var(--fg); font-weight: 600; }
+
+.form-section {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.form-section > h3 {
+  margin: 0 0 8px;
+  font-size: 0.92em;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* Line editor (parsons editor) */
+.lines-editor { display: flex; flex-direction: column; gap: 6px; }
+.line-row {
+  display: grid;
+  grid-template-columns: 20px 1fr 70px 110px 70px 56px;
+  gap: 8px;
+  align-items: center;
+  background: var(--panel-2);
+  padding: 6px 8px;
+  border-radius: var(--radius);
+}
+.line-row input[type="text"]   { font-family: var(--font-mono); width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--panel); color: var(--fg); }
+.line-row input[type="number"] { width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--panel); color: var(--fg); }
+.line-row label { font-size: 0.85em; display: flex; gap: 4px; align-items: center; white-space: nowrap; }
+.line-grip { color: var(--muted); cursor: grab; user-select: none; text-align: center; line-height: 1; }
+.line-ctrl { display: flex; flex-direction: column; gap: 4px; }
+.line-ctrl button {
+  padding: 2px 6px; min-height: 24px;
+  font-size: 14px; line-height: 1;
+  border-radius: 4px;
+  border: 1px solid var(--border-strong);
+  background: var(--panel);
+  cursor: pointer;
+}
+.line-ctrl button[disabled] { opacity: 0.4; cursor: not-allowed; }
+.line-ctrl .del { color: var(--bad); border-color: var(--bad); margin-top: 2px; }
+.line-ctrl .del:hover { background: #FCE4E6; }
+
+/* Issue list (validation panel) */
+.issue-list { list-style: none; padding: 0; margin: 0; max-height: 240px; overflow: auto; }
+.issue-list li { padding: 8px 10px; border-bottom: 1px solid var(--border); cursor: pointer; }
+.issue-list li:hover { background: var(--panel-2); }
+.issue-list li .level {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.78em;
+  margin-right: 6px;
+  font-weight: 700;
+}
+.issue-list .level.error   { background: #FCE4E6; color: var(--bad); }
+.issue-list .level.warning { background: #FFF1D6; color: var(--warn); }
+.issue-list code { font-family: var(--font-mono); font-size: 0.85em; color: var(--muted); }
+
+/* Tabbar (Form / JSON / Preview) */
+.tabbar { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+.tabbar button {
+  background: transparent;
+  border: 0;
+  padding: 8px 14px;
+  cursor: pointer;
+  font: inherit;
+  /* Without an explicit colour the browser defaults to black, which
+     in dark and HC themes is unreadable on the dark pane background. */
+  color: var(--fg);
+  border-bottom: 2px solid transparent;
+  min-height: 40px;
+}
+.tabbar button:hover { color: var(--accent); }
+.tabbar button[aria-selected="true"] {
+  border-bottom-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+[data-theme="hc"] .tabbar button { color: var(--fg); }
+[data-theme="hc"] .tabbar button[aria-selected="true"] {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* Top-bar toolbar (teacher) */
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.spacer { flex: 1; }
+.save-status { font-size: 0.85em; color: var(--muted); }
+.save-status.saving   { color: var(--warn); }
+.save-status.unsaved  { color: var(--bad); }
+
+/* JSON edit tab */
+textarea.json-edit {
+  width: 100%;
+  min-height: 240px;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  padding: 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--fg);
+  resize: vertical;
+}
+
+/* Draft cards (Open dialog) */
+.activity-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  display: flex; align-items: center; gap: 10px;
+}
+.activity-card .grow  { flex: 1; min-width: 0; }
+.activity-card .title { font-weight: 600; }
+.activity-card .type-pill { font-size: 0.75em; padding: 2px 8px; background: var(--accent); color: #fff; border-radius: 999px; }
+
+@media (max-width: 900px) {
+  .form-row { grid-template-columns: 1fr; }
+  .form-row > label { padding-top: 0; }
+}
+
+/* =====================================================================
+ * Add-activity type picker (teacher tool)
+ * Cards laid out in a responsive grid that wraps to fit the modal —
+ * never scrolls horizontally. Each card is colour-coded with the
+ * activity type's accent colour so the picker matches the rest of the
+ * UI's colour system.
+ * ===================================================================== */
+.type-picker-intro {
+  font-size: 0.95em;
+  color: var(--muted);
+  margin: 0 0 14px;
+}
+.type-picker-grid {
+  display: grid;
+  /* auto-fit wraps cards on narrow screens; never overflows horizontally.
+     The minmax floor uses min(190px, 100%) so on very narrow widths the
+     card shrinks instead of forcing a horizontal scrollbar. */
+  grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr));
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+.type-picker-card {
+  /* Reset button defaults */
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  /* Card body — coloured left accent bar plus tinted background, both
+     driven by --type-colour so the same palette as the student app
+     applies here. */
+  background: color-mix(in srgb, var(--type-colour, var(--accent)) 10%, var(--panel));
+  color: var(--fg);
+  border: 1px solid color-mix(in srgb, var(--type-colour, var(--border-strong)) 35%, var(--border));
+  border-left: 5px solid var(--type-colour, var(--accent));
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 96px;
+  /* Allow long descriptions to wrap; never overflow */
+  white-space: normal;
+  word-wrap: break-word;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
+}
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .type-picker-card { background: var(--panel); }
+}
+.type-picker-card:hover {
+  background: color-mix(in srgb, var(--type-colour, var(--accent)) 22%, var(--panel));
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-1);
+}
+.type-picker-card:focus-visible {
+  outline: 2px solid var(--type-colour, var(--focus));
+  outline-offset: 2px;
+}
+.type-picker-badge {
+  display: inline-block;
+  align-self: flex-start;
+  background: var(--type-colour, var(--accent));
+  color: #FFFFFF;
+  font-size: 0.78em;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+  text-transform: lowercase;
+  letter-spacing: 0.04em;
+}
+.type-picker-desc {
+  font-size: 0.92em;
+  color: var(--fg);
+  line-height: 1.45;
+}
+[data-theme="dark"] .type-picker-card {
+  background: color-mix(in srgb, var(--type-colour, var(--accent)) 22%, var(--panel-2));
+  border-color: color-mix(in srgb, var(--type-colour, var(--border-strong)) 45%, var(--border));
+}
+[data-theme="dark"] .type-picker-card:hover {
+  background: color-mix(in srgb, var(--type-colour, var(--accent)) 34%, var(--panel-2));
+}
+[data-theme="hc"] .type-picker-card {
+  background: var(--bg);
+  border: 2px solid var(--fg);
+  border-left-width: 5px;
+  color: var(--fg);
+}
+[data-theme="hc"] .type-picker-badge {
+  background: var(--accent) !important;
+  color: var(--accent-fg) !important;
+}
+
+/* "Advanced" disclosure at the bottom of the activity editor — hides
+   rarely-used fields (timing, teacher notes) by default. */
+.form-advanced {
+  margin-top: 6px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  background: transparent;
+}
+.form-advanced > summary {
+  cursor: pointer;
+  padding: 10px 14px;
+  font-size: 0.88em;
+  font-weight: 500;
+  color: var(--muted);
+  list-style: none;
+  user-select: none;
+}
+.form-advanced > summary::before {
+  content: "▶";
+  display: inline-block;
+  margin-right: 8px;
+  font-size: 0.75em;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+.form-advanced[open] > summary::before { transform: rotate(90deg); }
+.form-advanced > summary::-webkit-details-marker { display: none; }
+.form-advanced-body { padding: 4px 14px 12px; }
+
+/* =====================================================================
+ * Teacher task list — override the dot-only type-pill from base.css
+ * with a proper labelled pill that uses the activity's --activity-colour.
+ * Same colour-coding pattern as the student app, but bigger because the
+ * teacher pane needs to be scannable.
+ * ===================================================================== */
+.task-list li.task-row > button {
+  padding: 10px 14px 10px 12px;
+  gap: 10px;
+}
+.task-list li.task-row .status {
+  background: color-mix(in srgb, var(--activity-colour, var(--panel)) 14%, var(--panel));
+  border-color: color-mix(in srgb, var(--activity-colour, var(--border)) 40%, var(--border));
+  color: var(--fg);
+}
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .task-list li.task-row .status { background: var(--panel); }
+}
+/* Proper labelled pill — override base.css's dot styling. */
+.task-list li.task-row .type-pill {
+  display: inline-block;
+  width: auto;
+  height: auto;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.7em;
+  font-weight: 600;
+  text-transform: lowercase;
+  letter-spacing: 0.03em;
+  background: var(--activity-colour, var(--accent));
+  color: #FFFFFF;
+  margin: 0;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+[data-theme="hc"] .task-list li.task-row .type-pill {
+  background: var(--accent) !important;
+  color: var(--accent-fg) !important;
+}
+
+/* =====================================================================
+ * Card primitives used by the per-type activity editors (cloze blanks,
+ * spot_the_bug bugs, predict_output options). Each card is a single
+ * entity — a blank, a bug or an option — with a head row containing
+ * its label and a remove button, then a stack of fields below.
+ *
+ * Cards are visually distinct from the surrounding form-section so the
+ * student can see at a glance that they're a repeated item and not part
+ * of the form's main flow.
+ * ===================================================================== */
+.form-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid color-mix(in srgb, var(--accent) 60%, var(--border-strong));
+  border-radius: var(--radius);
+  padding: 10px 12px 8px;
+  margin-bottom: 8px;
+}
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .form-card { border-left-color: var(--accent); }
+}
+/* The card's last form-row has no margin so the card padding does the
+   spacing — avoids a double gap at the bottom edge. */
+.form-card .form-row:last-child { margin-bottom: 0; }
+.form-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.form-card-head > strong {
+  font-size: 0.92em;
+  color: var(--fg);
+  font-weight: 600;
+}
+/* A "correct answer" radio in a card head row (used by predict_output
+   options). Sits next to the strong label as a single tappable target. */
+.form-card-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.88em;
+  color: var(--muted);
+  user-select: none;
+}
+.form-card-radio input[type="radio"] {
+  margin: 0;
+  accent-color: var(--accent);
+}
+.form-card-radio:has(input:checked) {
+  color: var(--ok);
+  font-weight: 600;
+}
+@supports not (selector(:has(*))) {
+  .form-card-radio input:checked ~ * { color: var(--ok); font-weight: 600; }
+}
+
+/* Empty-state row shown inside a sub-list when there are zero entries.
+   Italicised, muted, smaller so it's visually distinct from real rows. */
+.form-empty {
+  margin: 4px 0 8px;
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--fg) 4%, var(--panel));
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 0.9em;
+  font-style: italic;
+}
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .form-empty { background: var(--panel-2); }
+}
+
+[data-theme="dark"] .form-card {
+  background: var(--panel-2);
+  border-color: var(--border);
+}
+[data-theme="hc"] .form-card {
+  background: var(--bg);
+  border: 1px solid var(--fg);
+  border-left: 3px solid var(--fg);
+}
+[data-theme="hc"] .form-card-head { border-bottom-color: var(--fg); }
+
+/* Inside a form-card, tighten the label gutter — the cards are narrower
+   than the main form so 160px would crowd the controls. */
+.form-card .form-row {
+  grid-template-columns: 110px 1fr;
+  gap: 6px 10px;
+  margin-bottom: 6px;
+  font-size: 0.88em;
+}
+.form-card .form-row > label {
+  padding-top: 4px;
+  font-size: 0.88em;
+}
+.form-card .form-hint {
+  font-size: 0.82em;
+  color: var(--muted);
+  margin: 2px 0 0;
+}
+.form-card .code-editor { min-height: 100px; }
+.form-card .code-editor-input { min-height: 100px; }
+
+/* =====================================================================
+ * Teacher task list layout — vertical flex column with a scrollable
+ * content region and a sticky footer pinned to the bottom of the pane.
+ *
+ * The footer holds the "+ Add activity" button so it stays visible no
+ * matter how long the list of activities grows, mirroring the pattern
+ * used by the Help sub-pane in the student tool's side panel.
+ * ===================================================================== */
+.task-list {
+  /* Override the default `overflow-y: auto` from base.css — we want the
+     scroll to happen INSIDE .task-list-scroll instead so the footer
+     stays pinned. */
+  overflow-y: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.task-list-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.task-list-footer {
+  flex-shrink: 0;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--pane);
+}
+.task-list-footer .btn {
+  width: 100%;
+  /* Add-activity button stands out as a clear primary call-to-action. */
+  font-weight: 600;
+}
+
+/* Placeholder line inside an empty section body — shows the section is
+   expanded but has no activities yet. Used most often for the
+   "Unsectioned" bucket when the pack is brand new. */
+.task-empty-row {
+  list-style: none;
+  padding: 8px 16px 8px 28px;
+  color: var(--muted);
+  font-style: italic;
+  font-size: 0.88em;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Pack details row at the top of the teacher task list — sits above
+   the sections, slightly distinguished so it reads as a meta-entry
+   rather than an activity. */
+.task-meta-row > button {
+  background: color-mix(in srgb, var(--accent) 6%, var(--pane));
+  border-left: 5px solid transparent;
+}
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .task-meta-row > button { background: var(--panel-2); }
+}
+.task-meta-row.current > button {
+  background: color-mix(in srgb, var(--accent) 18%, var(--pane));
+  border-left-color: var(--accent);
+  border-left-width: 7px;
+  padding-left: 14px;
+  font-weight: 600;
+}
+
+/* =====================================================================
+ * Defensive theming for ALL form controls inside the teacher's editor
+ * area. Many per-type editors create inputs/selects/textareas via
+ * DOM.el(...) with inline styles that don't include `color` or
+ * `background-color`. Without these defaults the native browser
+ * stylings (black text on white) leak through and become illegible on
+ * the dark and HC themes. Apply theme-aware defaults at low specificity
+ * so explicit overrides still win.
+ * ===================================================================== */
+.main input[type="text"],
+.main input[type="number"],
+.main input[type="search"],
+.main input[type="email"],
+.main input[type="url"],
+.main select,
+.main textarea {
+  color: var(--fg);
+  background-color: var(--panel);
+}
+.main input::placeholder,
+.main textarea::placeholder {
+  color: var(--muted);
+  opacity: 0.7;
+}
+[data-theme="hc"] .main input,
+[data-theme="hc"] .main select,
+[data-theme="hc"] .main textarea {
+  color: var(--fg);
+  background-color: var(--bg);
+  border-color: var(--fg);
+}
+[data-theme="hc"] .main input::placeholder,
+[data-theme="hc"] .main textarea::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}

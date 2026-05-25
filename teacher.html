@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en-GB" data-theme="" data-font="atkinson" data-size="18" data-line="1.6" data-motion="">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="application-name" content="PyQuiz — Teacher">
+<title>PyQuiz — Teacher</title>
+
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/activities.css">
+<link rel="stylesheet" href="css/editor.css">
+</head>
+<body>
+<div class="skip"><a href="#main-region" class="skip-link">Skip to main content</a></div>
+
+<div class="app">
+  <header class="topbar" role="banner">
+    <button id="burger" class="burger" aria-label="Toggle pack list">☰</button>
+    <h1 id="pack-title">PyQuiz — Teacher</h1>
+    <span class="save-status" id="save-status">Saved</span>
+    <div class="right toolbar">
+      <button class="btn" id="new-btn" title="New pack">New</button>
+      <button class="btn" id="open-btn" title="Open draft">Open</button>
+      <button class="btn" id="import-btn" title="Import a pack file">Import</button>
+      <input type="file" id="import-file" accept=".pyquiz,.json,.txt" style="display:none">
+      <button class="btn" id="validate-btn" title="Re-run validation">Validate</button>
+      <button class="btn primary" id="export-btn" title="Export pack">Export</button>
+      <button class="btn icon" id="size-down" aria-label="Decrease text size" title="Smaller text">A−</button>
+      <button class="btn icon" id="size-up" aria-label="Increase text size" title="Larger text">A+</button>
+      <button class="btn icon" id="theme-btn" aria-label="Cycle theme" title="Cycle theme">◐</button>
+      <button class="btn icon" id="settings-btn" aria-label="Open settings" title="Settings">⚙</button>
+      <span class="topbar-gap" aria-hidden="true"></span>
+      <button id="burger-right" class="burger" aria-label="Toggle side panel" title="Toggle side panel">☰</button>
+    </div>
+  </header>
+  <div id="storage-banner" class="banner" hidden></div>
+  <div id="layout" class="layout">
+    <nav class="task-list" id="task-list" aria-label="Pack contents">
+      <div class="task-list-scroll">
+        <h2>Pack contents</h2>
+        <ol id="task-ol"></ol>
+      </div>
+      <div class="task-list-footer" id="task-list-footer"></div>
+    </nav>
+    <main class="main" id="main-region" tabindex="-1"></main>
+    <aside class="side-panel" id="side-panel" aria-label="Validation and help"></aside>
+  </div>
+  <span class="live" aria-live="polite" id="live-polite"></span>
+  <span class="live" aria-live="assertive" id="live-assert"></span>
+</div>
+
+<!--
+  Script load order — see student.html for notes. The teacher tool
+  additionally loads the Editors registry and per-type editors, which
+  are NOT included in the student build.
+-->
+
+<!-- Core -->
+<script src="js/core/constants.js"></script>
+<script src="js/core/strings.js"></script>
+<script src="js/core/schema.js"></script>
+<script src="js/core/normalise.js"></script>
+<script src="js/core/codec.js"></script>
+<script src="js/core/storage.js"></script>
+<script src="js/core/validator.js"></script>
+<script src="js/core/marker.js"></script>
+<script src="js/core/pack.js"></script>
+<script src="js/core/demo.js"></script>
+
+<!-- UI helpers -->
+<script src="js/ui/dom.js"></script>
+<script src="js/ui/modal.js"></script>
+<script src="js/ui/settings.js"></script>
+<script src="js/ui/a11y.js"></script>
+<script src="js/ui/pyodide.js"></script>
+<script src="js/ui/confetti.js"></script>
+
+<!-- Renderers (so the Preview tab can render exactly what students see) -->
+<script src="js/renderers/index.js"></script>
+<script src="js/renderers/parsons.js"></script>
+<script src="js/renderers/cloze.js"></script>
+<script src="js/renderers/trace_table.js"></script>
+<script src="js/renderers/spot_the_bug.js"></script>
+<script src="js/renderers/predict_output.js"></script>
+<script src="js/renderers/starter_challenge.js"></script>
+
+<!-- Editors -->
+<script src="js/editors/index.js"></script>
+<script src="js/editors/parsons.js"></script>
+<script src="js/editors/cloze.js"></script>
+<script src="js/editors/trace_table.js"></script>
+<script src="js/editors/spot_the_bug.js"></script>
+<script src="js/editors/predict_output.js"></script>
+<script src="js/editors/starter_challenge.js"></script>
+
+<!-- App -->
+<script src="js/apps/teacher.js"></script>
+</body>
+</html>
