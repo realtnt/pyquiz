@@ -65,7 +65,11 @@
   Script load order matters. Each layer depends on those above it.
   Core modules self-register on the global PyQuiz namespace.
   Adding a new activity type means: drop a renderer file under
-  js/renderers/, add a <script src="student/js/js__core__constants.js"></script>
+  js/renderers/, add a <script> tag below, no other changes needed.
+-->
+
+<!-- Core (in dependency order) -->
+<script src="student/js/js__core__constants.js"></script>
 <script src="student/js/js__core__strings.js"></script>
 <script src="student/js/js__core__schema.js"></script>
 <script src="student/js/js__core__normalise.js"></script>

@@ -1,8 +1,3 @@
-tag below, no other changes needed.
--->
-
-<!-- Core (in dependency order) -->
-<script>
 /* === inlined from js/core/constants.js === */
 /* =====================================================================
  * PyQuiz.Constants — version tags, type registry constants
