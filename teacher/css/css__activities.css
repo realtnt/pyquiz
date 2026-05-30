@@ -1,0 +1,1153 @@
+/* === inlined from css/activities.css === */
+/* =====================================================================
+ * PyQuiz — per-activity styles (shared by student + teacher)
+ *
+ * Renderer-side visual styles for each activity type. Editors do not
+ * need this file; teachers see these styles through the Preview tab,
+ * which reuses the student renderers.
+ *
+ * Contains: parsons, cloze, trace table, spot the bug, predict output,
+ * starter challenge. Plus mark-ok / mark-bad highlights and the shake
+ * animation (suppressed under reduced motion).
+ * ===================================================================== */
+
+/* Parsons */
+.parsons-areas {
+  display: grid;
+  /* Program (large) on top, bin (smaller) below — works at any width */
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+.parsons-area {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+}
+.parsons-area[data-area="program"] { background: #FBFAF5; border-color: var(--border-strong); }
+.parsons-area.parsons-bin {
+  background: #F3F0EA;
+  border-style: dashed;
+  border-color: var(--border-strong);
+  min-height: 90px;
+}
+.parsons-area h3 { margin: 0 0 4px; font-size: 0.95em; }
+.parsons-area .area-desc { margin: 0 0 8px; color: var(--muted); font-size: 0.85em; }
+.parsons-area.drag-over { background: #E6EEFB; border-color: var(--accent); }
+.parsons-area.ok { animation: flashOk 0.6s ease; }
+.parsons-area.bad { animation: flashBad 0.6s ease; }
+@keyframes flashOk { 0% { background: #C8EAD5; } 100% { background: #FBFAF5; } }
+@keyframes flashBad { 0% { background: #F6CDD2; } 100% { background: #FBFAF5; } }
+.parsons-list { list-style: none; padding: 0; margin: 0; min-height: 60px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.parsons-bin-hint {
+  color: var(--muted);
+  font-style: italic;
+  padding: 12px;
+  text-align: center;
+  font-size: 0.9em;
+}
+.parsons-block {
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  cursor: grab;
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  position: relative;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+.parsons-block.selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(45,91,166,0.25); background: #EAF1FC; }
+.parsons-block.fixed { background: var(--panel-2); cursor: not-allowed; }
+.parsons-block.dragging { opacity: 0.4; }
+/* Blocks placed in the bin are visually marked as 'discarded' — faded,
+   muted background, strike-through-like greyscale colour. The colour is
+   reset automatically when they're moved back to the program. */
+.parsons-block.binned {
+  background: #E9E5DD;
+  border-color: #BDB7AA;
+  color: #6B6359;
+  opacity: 0.75;
+}
+.parsons-block.binned code { color: #6B6359; }
+.parsons-block.drop-above { box-shadow: 0 3px 0 var(--accent) inset, 0 0 0 1px var(--border-strong); }
+.parsons-block.drop-below { box-shadow: 0 -3px 0 var(--accent) inset, 0 0 0 1px var(--border-strong); }
+/* Inset shadow with positive Y is drawn at the TOP edge of the box; with
+   negative Y, at the BOTTOM. So drop-above = positive (line at top of
+   the block under the cursor) and drop-below = negative. */
+.parsons-block code { background: transparent; font-family: var(--font-mono); white-space: pre; }
+.fixed-badge { margin-left: auto; font-size: 0.7em; padding: 2px 6px; background: var(--border); border-radius: 999px; }
+
+/* Inline action icon — only rendered when a non-fixed parsons block is
+   selected. Sits at the right edge of the block. Clicking it moves the
+   block (to bin or back to program); clicks bubble is stopped so the
+   block stays selected. */
+.parsons-action {
+  margin-left: auto;
+  background: var(--panel-2);
+  border: 1px solid var(--border-strong);
+  color: var(--fg);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 1.05em;
+  min-width: 36px;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+.parsons-action:hover {
+  background: var(--accent);
+  color: #FFFFFF;
+  border-color: var(--accent);
+}
+.parsons-action:focus {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+/* When the action icon is present, make sure the code text doesn't
+   collide with it visually. */
+.parsons-block.selected { padding-right: 6px; }
+[data-theme="dark"] .parsons-action {
+  background: #34343A; color: var(--fg); border-color: var(--border-strong);
+}
+[data-theme="dark"] .parsons-action:hover {
+  background: var(--accent); color: #FFFFFF;
+}
+[data-theme="hc"] .parsons-action {
+  background: #000000; color: var(--fg); border-color: var(--fg);
+}
+[data-theme="hc"] .parsons-action:hover {
+  background: var(--fg); color: #000000;
+}
+
+/* Cloze */
+.cloze-code {
+  background: var(--code-bg);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 1em;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.cloze-code .code-row { gap: 12px; }
+.blank-text {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  padding: 2px 6px;
+  border: 2px solid var(--accent);
+  border-radius: 4px;
+  background: #FFFAF0;
+  min-width: 3em;
+}
+.blank-select {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  padding: 2px 6px;
+  border: 2px solid var(--accent);
+  border-radius: 4px;
+  background: #FFFAF0;
+}
+.blank-pool {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  padding: 2px 10px;
+  border: 2px dashed var(--accent);
+  border-radius: 4px;
+  background: #FFFAF0;
+  min-width: 3em;
+  cursor: pointer;
+  min-height: 32px;
+}
+.blank-pool.filled { border-style: solid; background: #EAF1FC; }
+.blank-bank {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  padding: 2px 10px;
+  border: 2px dashed var(--accent);
+  border-radius: 4px;
+  background: #FFFAF0;
+  min-width: 3em;
+  cursor: pointer;
+  min-height: 32px;
+}
+.blank-bank.filled { border-style: solid; background: #EAF1FC; }
+.blank-bank.drag-over, .blank-pool.drag-over { background: #D6E4F7; }
+.mark-ok { border-color: var(--ok) !important; background: #E2F1E8 !important; }
+.mark-bad { border-color: var(--bad) !important; background: #FCE4E6 !important; animation: shake 0.5s; }
+[data-motion="off"] .mark-bad, .reduce-motion .mark-bad { animation: none !important; }
+@keyframes shake { 0%,100%{ transform: translateX(0); } 25%{ transform: translateX(-3px); } 75%{ transform: translateX(3px); } }
+
+.cloze-pool {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.cloze-pool.drag-over { background: #E6EEFB; border-color: var(--accent); }
+.cloze-pool h3 { margin: 0 0 6px; font-size: 0.9em; }
+.pool-list { list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; flex-wrap: wrap; }
+.pool-chip {
+  font-family: var(--font-mono);
+  padding: 4px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+}
+.pool-chip[role="button"]:hover { background: var(--panel-2); }
+.pool-chip[role="button"]:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pool-chip.dragging { opacity: 0.4; }
+.pool-empty { color: var(--muted); font-style: normal; }
+.pool-popup {
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-1);
+  padding: 6px;
+  display: flex; flex-direction: column; gap: 4px;
+  min-width: 120px;
+}
+.pool-popup .pool-item {
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: 6px 10px;
+  font: inherit;
+  font-family: var(--font-mono);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.pool-popup .pool-item:hover, .pool-popup .pool-item:focus-visible { background: var(--panel-2); }
+
+/* Trace table */
+.trace-table-wrap { overflow: auto; }
+.trace-table {
+  border-collapse: collapse;
+  margin-top: 10px;
+  background: var(--panel);
+}
+.trace-table th, .trace-table td {
+  border: 1px solid var(--border-strong);
+  padding: 6px 10px;
+  text-align: center;
+  font-family: var(--font-mono);
+  min-width: 80px;
+}
+.trace-table thead th {
+  background: var(--panel-2);
+  font-weight: 700;
+}
+.trace-table .prefilled-cell { background: var(--panel-2); }
+.trace-table .prefilled { color: var(--muted); }
+.trace-input {
+  font-family: var(--font-mono);
+  width: 6em;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #FFFAF0;
+  text-align: center;
+}
+.trace-add-cell {
+  padding: 12px !important;
+  text-align: center !important;
+  border: 1px solid var(--border-strong);
+  background: var(--panel);
+}
+.trace-add-row {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: var(--panel);
+  color: var(--accent);
+  font-size: 1.4em; line-height: 1;
+  cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 600;
+  padding: 0;
+  transition: background-color 0.12s ease, color 0.12s ease, transform 0.05s ease;
+}
+.trace-add-row:hover { background: var(--accent); color: var(--accent-fg); }
+.trace-add-row:active { transform: translateY(1px); }
+
+/* Spot the bug */
+.stb-behaviour { background: var(--panel-2); padding: 8px 12px; border-radius: var(--radius); margin-bottom: 10px; }
+.stb-behaviour p { margin: 4px 0; }
+.stb-constraint { font-style: normal; color: var(--warn); margin: 6px 0 10px; padding: 4px 10px; border-left: 3px solid var(--warn); background: #FFF7E6; border-radius: 0 var(--radius) var(--radius) 0; }
+.stb-code {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+}
+.stb-line {
+  display: grid;
+  grid-template-columns: 1.8em 1fr;
+  gap: 8px;
+  padding: 8px 12px;
+  align-items: center;
+  border-bottom: 1px dashed var(--border);
+  border-left: 4px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+  min-height: 36px;
+}
+.stb-line:focus {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.stb-line:hover { background: var(--panel-2); }
+.stb-line:last-child { border-bottom: 0; }
+/* Selected (student marked this line as buggy) — match the po-option
+   highlight style: accent-tinted background, accent left bar. */
+.stb-line.marked {
+  background: color-mix(in srgb, var(--warn) 22%, var(--panel));
+  border-left-color: var(--warn);
+}
+.stb-line.mark-ok {
+  background: color-mix(in srgb, var(--ok) 22%, var(--panel));
+  border-left-color: var(--ok);
+}
+.stb-line.mark-bad {
+  background: color-mix(in srgb, var(--bad) 22%, var(--panel));
+  border-left-color: var(--bad);
+}
+/* color-mix fallback */
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .stb-line.marked  { background: #FFF1D6; }
+  .stb-line.mark-ok { background: #E2F1E8; }
+  .stb-line.mark-bad{ background: #FCE4E6; }
+}
+.stb-fix { grid-column: 2; padding-top: 4px; }
+.stb-fix-input {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  padding: 4px 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: #FFFAF0;
+  /* Fill the remaining width of the line so the student has room to
+     type WAY past the original line length without horizontal scroll. */
+  flex: 1 1 0;
+  min-width: 12em;
+  width: 100%;
+}
+.stb-fix {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  font-family: var(--font-mono);
+}
+.stb-fix[hidden] { display: none; }
+.stb-fix.dragging { opacity: 0.85; }
+.stb-fix-grip {
+  display: inline-flex; align-items: center;
+  cursor: grab;
+  padding: 2px 6px;
+  margin-left: 4px;
+  color: var(--muted);
+  user-select: none;
+  font-size: 0.85em;
+  border-radius: 4px;
+}
+.stb-fix-grip:hover { background: var(--panel-2); color: var(--fg); }
+.stb-fix-grip:active { cursor: grabbing; }
+.stb-fix-indent {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  white-space: pre;
+  user-select: none;
+  color: transparent;   /* spaces are invisible but reserve width */
+}
+
+/* Predict output */
+.po h3 { margin: 0 0 6px; font-size: 0.95em; }
+.po-options { border: 0; padding: 0; margin: 12px 0 0; display: flex; flex-direction: column; gap: 8px; }
+.po-options-legend { font-weight: 600; padding: 0; margin: 0 0 8px; color: var(--fg); }
+.po-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: var(--fg);
+  padding: 10px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  cursor: pointer;
+  background: var(--panel);
+  min-height: 44px;
+  position: relative;
+  transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.po-option:hover { background: var(--panel-2); }
+.po-option.selected {
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel));
+  border-color: var(--accent);
+  border-left-width: 5px;
+  padding-left: 10px;
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+.po-option-code { margin: 0; font-family: var(--font-mono); white-space: pre; padding: 0; }
+.po-free { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.po-input {
+  font-family: var(--font-mono);
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: #FFFAF0;
+  width: 100%;
+  min-height: 100px;
+}
+
+/* Starter challenge */
+.starter-code { position: relative; }
+.copy-btn { margin-top: 8px; }
+.starter-examples { margin-top: 14px; }
+.examples-table { border-collapse: collapse; margin-top: 6px; }
+.examples-table th, .examples-table td { border: 1px solid var(--border-strong); padding: 6px 10px; text-align: left; font-family: var(--font-mono); }
+.examples-table thead th { background: var(--panel-2); font-family: var(--font-body); }
+.starter-guide { background: var(--panel-2); padding: 10px 12px; border-radius: var(--radius); border-left: 3px solid var(--accent); }
+.starter-ack { margin-top: 12px; }
+.starter-ack label { display: flex; gap: 10px; align-items: center; cursor: pointer; }
+
+
+/* =====================================================================
+ * Theme overrides — dark and high-contrast
+ *
+ * The light theme uses warm cream surfaces (#FBFAF5, #F3F0EA, #FFFAF0)
+ * that pop against the off-white background. In dark / HC themes those
+ * cream surfaces become bright islands — and any inherited light text
+ * sits on top of them invisibly. The right answer is to swap those
+ * surface colours to dark greys that are visibly lighter than the
+ * theme's main bg (so the surface still reads as "elevated") but dark
+ * enough that the theme's light --fg text reads cleanly on top.
+ *
+ * For mark surfaces (.mark-ok / .mark-bad / .marked / .stb-line.marked
+ * / .feedback.correct etc) the SEMANTIC colour (green/red/yellow) needs
+ * to stay recognisable — so we keep a brighter background but pin a
+ * very dark text colour so the meaning still reads.
+ * ===================================================================== */
+
+/* ===== DARK ===== */
+/* Tone-mapped surface colours: panel = #2C2C32, panel-2 = #34343A.
+   We use a slightly-lighter-than-panel-2 grey for cream-equivalents. */
+[data-theme="dark"] .parsons-area[data-area="program"] {
+  background: var(--panel); border-color: var(--border-strong);
+}
+[data-theme="dark"] .parsons-area.parsons-bin {
+  background: #2A2A30; border-color: var(--border-strong);
+}
+[data-theme="dark"] .parsons-block {
+  background: #3A3A42; border-color: var(--border-strong); color: var(--fg);
+}
+[data-theme="dark"] .parsons-block code { color: var(--fg); }
+[data-theme="dark"] .parsons-block.binned {
+  background: #2A2A30; border-color: #45454C; color: #888;
+}
+[data-theme="dark"] .parsons-block.binned code { color: #888; }
+[data-theme="dark"] .parsons-block.selected {
+  background: #1F3A5E; border-color: var(--accent); color: var(--fg);
+  box-shadow: 0 0 0 2px rgba(107,160,229,0.3);
+}
+[data-theme="dark"] .parsons-block.fixed {
+  background: #2A2A30; color: var(--muted);
+}
+[data-theme="dark"] .parsons-area h3,
+[data-theme="dark"] .parsons-area .area-desc { color: var(--fg); }
+[data-theme="dark"] .parsons-bin-hint { color: var(--muted); }
+[data-theme="dark"] .fixed-badge { background: #45454C; color: var(--fg); }
+[data-theme="dark"] .parsons-area.drag-over { background: #25395E; }
+
+/* Cloze surfaces */
+[data-theme="dark"] .blank-text,
+[data-theme="dark"] .blank-select {
+  background: #3A3A42; border-color: var(--border-strong); color: var(--fg);
+}
+[data-theme="dark"] .blank-bank {
+  background: #2A2A30; border-color: var(--border-strong); color: var(--fg);
+}
+[data-theme="dark"] .blank-bank.filled {
+  background: #1F3A5E; border-color: var(--accent); color: var(--fg);
+}
+[data-theme="dark"] .cloze-pool {
+  background: #2A2A30; border-color: var(--border-strong);
+}
+[data-theme="dark"] .pool-chip {
+  background: #3A3A42; border-color: var(--border-strong); color: var(--fg);
+}
+[data-theme="dark"] .pool-chip:hover { background: #45454C; }
+[data-theme="dark"] .cloze-pool.drag-over { background: #25395E; }
+
+/* Trace inputs */
+[data-theme="dark"] .trace-input {
+  background: #3A3A42; color: var(--fg); border-color: var(--border);
+}
+[data-theme="dark"] .trace-input:focus {
+  border-color: var(--accent); background: #2A3A4E;
+}
+[data-theme="dark"] .trace-table th { background: #2A2A30; color: var(--fg); }
+[data-theme="dark"] .trace-table td { border-color: var(--border); }
+
+/* Spot the bug — fix input + constraint banner */
+[data-theme="dark"] .stb-fix-input {
+  background: #3A3A42; color: var(--fg); border-color: var(--border-strong);
+}
+[data-theme="dark"] .stb-constraint {
+  background: #3A2A1F; color: #FFD68A; border-left-color: #E8B868;
+}
+
+/* Predict-output input */
+[data-theme="dark"] .po-input {
+  background: #3A3A42; color: var(--fg); border-color: var(--border-strong);
+}
+/* The expected/actual output display in predict_output and starter */
+[data-theme="dark"] .po-output,
+[data-theme="dark"] .po-options,
+[data-theme="dark"] .starter-code .code-block,
+[data-theme="dark"] .examples-table th,
+[data-theme="dark"] .examples-table td {
+  background: #2A2A30; color: var(--fg); border-color: var(--border-strong);
+}
+[data-theme="dark"] .examples-table thead th { background: #34343A; }
+
+/* Multiple-choice option labels: highlight rather than radio dot */
+[data-theme="dark"] .po-option {
+  background: #2C2C32; border: 1px solid var(--border); color: var(--fg);
+}
+[data-theme="dark"] .po-option:hover { background: #34343A; }
+[data-theme="dark"] .po-option.selected {
+  background: #1F3A5E; border-color: var(--accent); color: var(--fg);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+
+/* Code blocks generally */
+[data-theme="dark"] pre.code-block,
+[data-theme="dark"] .code-block {
+  background: #1A1A1F; color: #DCDCD8; border-color: var(--border-strong);
+}
+
+/* Mark surfaces — keep semantic colour, pin dark text so labels read */
+[data-theme="dark"] .stb-line                { background: transparent; }
+[data-theme="dark"] .stb-line:hover          { background: #2C2C32; }
+[data-theme="dark"] .stb-line.marked    { background: #6E5A1A; color: #FFEFC0; border-left-color: var(--warn); }
+[data-theme="dark"] .stb-line.mark-ok   { background: #1F4A2B; color: #C8EAD5; border-left-color: var(--ok); }
+[data-theme="dark"] .stb-line.mark-bad  { background: #5A1F26; color: #F6CDD2; border-left-color: var(--bad); }
+[data-theme="dark"] .stb-line.marked code,
+[data-theme="dark"] .stb-line.mark-ok code,
+[data-theme="dark"] .stb-line.mark-bad code { color: inherit; }
+[data-theme="dark"] .mark-ok  { background: #1F4A2B !important; color: #C8EAD5 !important; border-color: var(--ok) !important; }
+[data-theme="dark"] .mark-bad { background: #5A1F26 !important; color: #F6CDD2 !important; border-color: var(--bad) !important; }
+
+/* Status pips in the task list */
+[data-theme="dark"] .status.not_started { background: #34343A; color: var(--muted); }
+[data-theme="dark"] .status.in_progress { background: #6E5A1A; color: #FFEFC0; border-color: var(--warn); }
+[data-theme="dark"] .status.correct     { background: #1F4A2B; color: #C8EAD5; border-color: var(--ok); }
+[data-theme="dark"] .status.incorrect   { background: #5A1F26; color: #F6CDD2; border-color: var(--bad); }
+[data-theme="dark"] .status.revealed    { background: #3A2A4E; color: #C9B8E8; border-color: #9080C5; }
+
+/* ===== HIGH CONTRAST ===== */
+/* HC uses bright yellow text on near-black. Surfaces should be black
+   with a yellow border so they don't form distracting bright islands. */
+[data-theme="hc"] .parsons-area[data-area="program"],
+[data-theme="hc"] .parsons-area.parsons-bin,
+[data-theme="hc"] .parsons-block,
+[data-theme="hc"] .blank-text,
+[data-theme="hc"] .blank-select,
+[data-theme="hc"] .blank-bank,
+[data-theme="hc"] .cloze-pool,
+[data-theme="hc"] .pool-chip,
+[data-theme="hc"] .trace-input,
+[data-theme="hc"] .stb-fix-input,
+[data-theme="hc"] .po-input,
+[data-theme="hc"] .po-output,
+[data-theme="hc"] .po-option,
+[data-theme="hc"] .examples-table th,
+[data-theme="hc"] .examples-table td,
+[data-theme="hc"] pre.code-block,
+[data-theme="hc"] .code-block {
+  background: #000000;
+  color: var(--fg);
+  border-color: var(--fg);
+}
+[data-theme="hc"] .parsons-block code,
+[data-theme="hc"] .pool-chip,
+[data-theme="hc"] pre.code-block { color: var(--fg); }
+[data-theme="hc"] .parsons-block.binned {
+  background: #1A1A1A; color: #888; border-color: #888;
+}
+[data-theme="hc"] .parsons-block.binned code { color: #888; }
+[data-theme="hc"] .parsons-block.selected,
+[data-theme="hc"] .blank-bank.filled,
+[data-theme="hc"] .po-option.selected {
+  background: var(--fg); color: #000000; border-color: var(--fg);
+}
+[data-theme="hc"] .parsons-block.selected code,
+[data-theme="hc"] .po-option.selected,
+[data-theme="hc"] .po-option.selected .po-option-code { color: #000000; }
+[data-theme="hc"] .parsons-area h3,
+[data-theme="hc"] .parsons-area .area-desc,
+[data-theme="hc"] .parsons-bin-hint { color: var(--fg); }
+[data-theme="hc"] .fixed-badge { background: var(--fg); color: #000000; }
+[data-theme="hc"] .stb-constraint {
+  background: #000000; color: var(--fg); border-left-color: var(--fg);
+}
+/* HC mark surfaces — invert (yellow bg with black text) so they read
+   loudly without competing with the regular yellow text everywhere. */
+[data-theme="hc"] .stb-line.marked,
+[data-theme="hc"] .mark-ok,
+[data-theme="hc"] .mark-bad,
+[data-theme="hc"] .stb-line.mark-ok,
+[data-theme="hc"] .stb-line.mark-bad {
+  background: var(--fg) !important;
+  color: #000000 !important;
+  border-color: var(--fg) !important;
+}
+[data-theme="hc"] .stb-line.marked code,
+[data-theme="hc"] .stb-line.mark-ok code,
+[data-theme="hc"] .stb-line.mark-bad code { color: #000000; }
+[data-theme="hc"] .status.not_started,
+[data-theme="hc"] .status.in_progress,
+[data-theme="hc"] .status.correct,
+[data-theme="hc"] .status.incorrect,
+[data-theme="hc"] .status.revealed {
+  background: #000000; color: var(--fg); border-color: var(--fg);
+}
+
+/* =====================================================================
+ * Hover effects — consistent across interactive elements
+ *
+ * Everything that moves on click, accepts input, or otherwise responds
+ * to the student gets a hover affordance. Subtle background-tint /
+ * border emphasis depending on the element type. Each rule is scoped
+ * tightly so it works alongside the theme overrides above.
+ * ===================================================================== */
+/* Parsons blocks — already draggable; give them a clearer hover.
+   Hover only applies when NOT selected, so the selected highlight
+   stays visible while the cursor is over the block. */
+.parsons-block:not(.fixed):not(.selected):hover {
+  background: var(--panel-2);
+  border-color: var(--accent);
+}
+[data-theme="dark"] .parsons-block:not(.fixed):not(.selected):hover {
+  background: #45454C;
+  border-color: var(--accent);
+}
+[data-theme="hc"] .parsons-block:not(.fixed):not(.selected):hover {
+  background: var(--panel-2);
+  border-color: var(--fg);
+}
+.parsons-block.binned:not(.selected):hover {
+  background: #D8D2C6;
+  color: #1B1B1F;
+}
+[data-theme="dark"] .parsons-block.binned:not(.selected):hover {
+  background: #34343A;
+  color: var(--fg);
+}
+
+/* Cloze inputs and slots */
+.blank-text:hover,
+.blank-select:hover {
+  border-color: var(--accent);
+}
+.blank-bank:hover {
+  background: var(--panel-2);
+  border-color: var(--accent);
+}
+[data-theme="dark"] .blank-text:hover,
+[data-theme="dark"] .blank-select:hover { border-color: var(--accent); background: #45454C; }
+[data-theme="dark"] .blank-bank:hover    { border-color: var(--accent); background: #34343A; }
+
+/* Pool chips — they already had a cursor:pointer, formalise the hover. */
+.pool-chip:hover {
+  background: var(--panel-2);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+/* Trace cells */
+.trace-input:hover {
+  border-color: var(--accent);
+}
+[data-theme="dark"] .trace-input:hover { border-color: var(--accent); background: #45454C; }
+
+/* Spot the bug fix box */
+.stb-fix-input:hover { border-color: var(--accent); }
+
+/* Predict-output free-text textarea */
+.po-input:hover { border-color: var(--accent); }
+
+/* Task list activity rows — already have a hover, make the bar
+   broader to signal it's the target. */
+.task-list li > button:hover {
+  /* Existing rule sets the bg tint; nothing else needed here. */
+}
+
+/* Topbar icon buttons — make sure they all get a hover */
+.btn.icon:hover, .btn:hover { filter: brightness(0.97); }
+[data-theme="dark"] .btn.icon:hover, [data-theme="dark"] .btn:hover { filter: brightness(1.18); }
+
+/* =====================================================================
+ * I/O panel — standard structured summary shown above every activity
+ * body in the student tool (and the teacher's preview). Two variants:
+ *
+ *   .io-panel-2col   — Label column + Expected column.
+ *                       Used for predict_output, parsons, cloze etc.
+ *                       where there's no "current" output to contrast.
+ *   .io-panel-3col   — Label column + Current + Expected.
+ *                       Used for spot_the_bug and modify, where the
+ *                       student needs to see what the code does NOW
+ *                       vs. what it should do.
+ *
+ * The Expected column is anchored visually with a light-blue tint
+ * because that's what the student is aiming for — making it the
+ * dominant cell on the page reduces "I have to read everything" load.
+ * ===================================================================== */
+.io-panel {
+  margin: 12px 0 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  overflow: hidden;
+}
+.io-grid {
+  display: grid;
+  /* 2-col layout: row-label column (auto-sized) + Expected column.
+     3-col layout overrides this rule. */
+  grid-template-columns: minmax(72px, max-content) 1fr;
+  /* No gap; cell borders provide the separation. */
+}
+.io-panel-3col .io-grid {
+  grid-template-columns: minmax(72px, max-content) 1fr 1fr;
+}
+.io-corner {
+  /* Empty top-left cell. Hairline so it doesn't visually float. */
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--border);
+}
+.io-col-head {
+  padding: 8px 12px;
+  font-size: 0.85em;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--border);
+}
+.io-col-expected {
+  /* Light-blue tint on the Expected column header so the eye is drawn
+     to it as the target. Soft enough to avoid competing with the
+     activity body. */
+  background: #DCEBFB;
+  color: #1A4A7A;
+}
+.io-row-head {
+  padding: 10px 12px;
+  font-size: 0.92em;
+  font-weight: 600;
+  color: var(--fg);
+  background: var(--panel-2);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+}
+.io-cell-prose {
+  /* Behaviour descriptions are prose, not program text. */
+  font-family: inherit !important;
+  font-weight: 400;
+}
+.io-cell {
+  /* Monospaced because most I/O is program text. Pre-wrap preserves
+     newlines from the teacher's data, lets long lines wrap. */
+  margin: 0;
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+  color: var(--fg);
+  min-height: 2.4em;
+}
+.io-cell-expected {
+  /* Faintly tinted to echo the column header; the highlight is what
+     makes the panel scannable. */
+  background: #ECF5FF;
+  color: #0F2A4A;
+  font-weight: 500;
+}
+.io-cell-current {
+  /* Slightly warmer panel to read as "what's wrong / what needs to
+     change" — paired with the cool Expected blue this gives a
+     two-state visual contrast without using red, which we reserve
+     for marking outcomes. */
+  background: #FFF6E6;
+  color: #4A3300;
+}
+.io-cell-span2 {
+  /* Input cell when in 3-col mode spans both data columns since the
+     input is the same for current and expected. Border-left removed
+     so the join with the row-head reads cleanly. */
+  grid-column: 2 / span 2;
+  background: var(--panel);
+  font-style: normal;
+}
+.io-empty {
+  /* The em-dash placeholder is intentionally light so it doesn't
+     read as content. */
+  color: var(--muted);
+  font-style: italic;
+  font-family: var(--font-base);
+  font-weight: 400;
+}
+
+/* Dark theme overrides — keep the cool/warm contrast but at low
+   luminance so the I/O panel reads as ambient context, not a bright
+   distraction from the activity body. */
+[data-theme="dark"] .io-col-expected {
+  background: #1F3A5A;
+  color: #BFD8F0;
+}
+[data-theme="dark"] .io-cell-expected {
+  background: #213C5E;
+  color: #DDE9F7;
+}
+[data-theme="dark"] .io-cell-current {
+  background: #3D2F1A;
+  color: #F0D9B0;
+}
+[data-theme="dark"] .io-corner,
+[data-theme="dark"] .io-row-head {
+  background: var(--panel-2);
+}
+
+[data-theme="hc"] .io-panel {
+  background: var(--bg);
+  border: 2px solid var(--fg);
+}
+[data-theme="hc"] .io-corner,
+[data-theme="hc"] .io-col-head,
+[data-theme="hc"] .io-row-head {
+  background: var(--bg);
+  color: var(--fg);
+  border-color: var(--fg);
+}
+[data-theme="hc"] .io-cell {
+  background: var(--bg);
+  color: var(--fg);
+  border-color: var(--fg);
+}
+[data-theme="hc"] .io-col-expected,
+[data-theme="hc"] .io-cell-expected {
+  background: var(--bg);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+[data-theme="hc"] .io-cell-current {
+  background: var(--bg);
+  color: var(--warn);
+  border-color: var(--warn);
+}
+
+/* =====================================================================
+ * Spot-the-bug / Modify — add-line and remove-line constraint UIs.
+ * These augment the existing in-place edit styling in this file.
+ * ===================================================================== */
+
+/* Read-only code blocks for add_line and remove_line. The cursor is
+   "default" for add_line (only the + circles do anything) and "pointer"
+   for remove_line (the whole block is clickable to select). */
+.stb-code .stb-line-readonly {
+  cursor: default;
+}
+.stb-code .stb-line-readonly:hover { background: transparent; }
+
+/* ---- ADD-LINE: floating circular + buttons on each block ---- */
+
+/* The block needs `position: relative` so the absolutely-positioned
+   + circles anchor to it. A bit of vertical padding leaves room for
+   the circles to overlap the top/bottom edges. */
+.stb-add .stb-add-block {
+  position: relative;
+  /* Extra vertical space so the circles don't clip into the previous
+     or next block when they appear on hover. */
+  margin: 6px 0;
+}
+/* The two circles per block — `+top` sits centered on the block's
+   top edge, `+bottom` on the bottom. Both hidden by default; revealed
+   when the block (or the circle itself) is hovered or focused. */
+.stb-add-plus {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  /* Perfectly round, sized for a tap target (28px) but visually
+     compact. Uses the accent colour so it reads as an action. */
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-fg, #FFFFFF);
+  border: 2px solid var(--panel);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05em;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  /* Hidden until the parent block is hovered/focused — keeps the
+     code listing visually quiet by default. Smooth fade so it doesn't
+     pop in jarringly. */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  z-index: 5;
+}
+.stb-add-plus-top    { top: 0; }
+.stb-add-plus-bottom { top: 100%; }
+
+/* Hovering or focusing the block reveals BOTH circles for that
+   block — top and bottom. Hovering a circle directly also keeps it
+   visible. Pointer-events flip to auto so the circles are clickable. */
+.stb-add-block:hover .stb-add-plus,
+.stb-add-block:focus-within .stb-add-plus,
+.stb-add-plus:hover,
+.stb-add-plus:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.stb-add-plus:hover,
+.stb-add-plus:focus-visible {
+  /* A subtle lift on direct hover signals "this exact circle is
+     active" when both are visible. */
+  transform: translate(-50%, -50%) scale(1.1);
+  outline: none;
+}
+
+/* The inserted line — visually distinct (light-green tint) so the
+   student can see exactly what they've added. */
+.stb-line-inserted {
+  background: #E8F5E9;
+  border-left: 3px solid var(--ok);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+}
+.stb-ln-new {
+  color: var(--ok);
+  font-weight: 600;
+}
+.stb-add-input {
+  flex: 1 1 0;
+  font-family: var(--font-mono);
+  background: transparent;
+  border: 1px solid var(--ok);
+  border-radius: var(--radius);
+  padding: 4px 6px;
+  color: var(--fg);
+}
+.stb-add-remove {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-size: 0.9em;
+  color: var(--muted);
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  min-width: 28px;
+  min-height: 28px;
+}
+.stb-add-remove:hover { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .stb-add-remove:hover { background: var(--panel-2); }
+}
+
+/* ---- REMOVE-LINE: Parsons-style bin paradigm ---- */
+
+/* Each existing line acts like a Parsons block — clickable, selectable,
+   with a 🗑 action icon revealed on selection. */
+.stb-code .stb-line-block {
+  cursor: pointer;
+  position: relative;
+  margin: 4px 0;
+  padding-right: 44px;          /* room for the action icon at right */
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  transition: border-color 0.08s ease, background 0.08s ease;
+}
+.stb-code .stb-line-block:hover {
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+.stb-code .stb-line-block:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+}
+.stb-code .stb-line-block.selected {
+  /* Same orange highlight Parsons uses for selected blocks. */
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .stb-code .stb-line-block:hover     { background: var(--panel-2); }
+  .stb-code .stb-line-block.selected  { background: var(--panel-2); }
+}
+
+/* The 🗑 / ↩ action icon revealed on the right of a selected block.
+   Round button so it visually echoes the add-line + circles. */
+.stb-line-action {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font-size: 0.95em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  z-index: 3;
+}
+.stb-line-action:hover {
+  background: color-mix(in srgb, var(--bad) 12%, transparent);
+  border-color: var(--bad);
+  color: var(--bad);
+}
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .stb-line-action:hover { background: var(--panel-2); }
+}
+
+/* The bin area itself — labelled, dashed-bordered to read as a
+   "drop zone" even though we click rather than drag. */
+.stb-remove-bin-section {
+  margin-top: 16px;
+}
+.stb-remove-bin-label {
+  font-size: 0.85em;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.stb-remove-bin {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--bad) 4%, transparent);
+  min-height: 56px;
+}
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .stb-remove-bin { background: var(--panel-2); }
+}
+.stb-bin-empty {
+  list-style: none;
+  padding: 8px 4px;
+  color: var(--muted);
+  font-style: italic;
+  font-size: 0.92em;
+  text-align: center;
+}
+/* A line currently in the bin reads as "removed" — strikethrough,
+   slightly faded — but stays clickable so the student can restore it. */
+.stb-remove-bin .stb-line-block {
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+.stb-remove-bin .stb-line-block:hover { opacity: 1; }
+
+/* Dark / HC theme adjustments. */
+[data-theme="dark"] .stb-line-inserted {
+  background: #1F3A28;
+  border-left-color: var(--ok);
+}
+[data-theme="dark"] .stb-remove-bin {
+  background: #3D1F23;
+  border-color: var(--border);
+}
+[data-theme="dark"] .stb-line-action {
+  background: var(--panel);
+}
+[data-theme="hc"] .stb-line-inserted {
+  background: var(--bg);
+  border-left: 3px solid var(--ok);
+  border-top: 1px solid var(--ok);
+  border-bottom: 1px solid var(--ok);
+}
+[data-theme="hc"] .stb-add-plus {
+  background: var(--bg);
+  color: var(--accent);
+  border: 2px solid var(--accent);
+}
+[data-theme="hc"] .stb-line-action {
+  background: var(--bg);
+  border: 2px solid var(--fg);
+  color: var(--fg);
+}
+[data-theme="hc"] .stb-remove-bin {
+  background: var(--bg);
+  border: 2px dashed var(--fg);
+}
+[data-theme="hc"] .stb-code .stb-line-block.selected {
+  background: var(--bg);
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+}
+
+/* Visible error box shown when a renderer throws — replaces what would
+   otherwise be a silent blank activity body. The student/teacher sees
+   the failure mode plus the underlying message so they can report it
+   or hit Reset to clear a stale stored response. */
+.render-error {
+  margin: 12px 0;
+  padding: 16px;
+  border: 1.5px solid var(--bad);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--bad) 6%, transparent);
+}
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .render-error { background: #FCE4E6; }
+}
+.render-error h3 {
+  margin: 0 0 8px 0;
+  color: var(--bad);
+  font-size: 1.05em;
+}
+.render-error p {
+  margin: 0 0 8px 0;
+  font-size: 0.95em;
+}
+.render-error-detail {
+  background: var(--panel-2);
+  padding: 8px 10px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

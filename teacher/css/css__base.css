@@ -1,0 +1,1518 @@
+/* === inlined from css/base.css === */
+/* =====================================================================
+ * PyQuiz — base styles (shared by student + teacher)
+ *
+ * Contains: design tokens, typography, layout grid, top bar, task list,
+ * main region, side panel, buttons, banners, code blocks, modals,
+ * skip-to-content, accessibility helpers.
+ * ===================================================================== */
+
+@font-face { font-family: "Atkinson Fallback"; src: local("Atkinson Hyperlegible"), local("AtkinsonHyperlegible-Regular"); font-display: swap; }
+
+:root {
+  --bg: #FAF7F2;
+  --pane: #EAE3D2;        /* clearly differentiated off-white for side panes */
+  --panel: #FFFFFF;
+  --panel-2: #F3EFE6;
+  --fg: #1B1B1F;
+  --muted: #5C5C63;
+  --border: #DCD6CA;
+  --border-strong: #8C8678;
+  --accent: #2D5BA6;
+  --accent-fg: #FFFFFF;
+  --ok: #1E6E3C;
+  --bad: #B12A38;
+  --warn: #8A5A00;
+  --focus: #E07A00;
+  --code-bg: #F0EBDC;
+  --code-fg: #1B1B1F;
+  --runner-bg: #FFFFFF;        /* white background for the output panel */
+  --runner-fg: #111111;         /* near-black text */
+  --shadow-1: 0 1px 2px rgba(20,18,12,.05), 0 2px 6px rgba(20,18,12,.04);
+  --radius: 6px;
+  --radius-lg: 10px;
+  --pad: 16px;
+  --line: 1.6;
+  --fs: 18px;
+  --letter: 0.02em;
+  --font-body: "Atkinson Fallback", "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", "Open Sans", Verdana, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "SF Mono", "Source Code Pro", Consolas, monospace;
+}
+
+/* HIGH CONTRAST: yellow on black, real contrast not pastel */
+[data-theme="hc"] {
+  --bg: #000000;
+  --pane: #0A0A0A;
+  --panel: #000000;
+  --panel-2: #1A1A1A;
+  --fg: #FFEC3D;             /* bright yellow text */
+  --muted: #FFE066;
+  --border: #FFEC3D;
+  --border-strong: #FFEC3D;
+  --accent: #FFEC3D;
+  --accent-fg: #000000;
+  --ok: #00FF66;
+  --bad: #FF5555;
+  --warn: #FFB000;
+  --focus: #FFEC3D;
+  --code-bg: #000000;
+  --code-fg: #FFEC3D;
+  --runner-bg: #000000;
+  --runner-fg: #FFEC3D;
+  --shadow-1: none;
+}
+
+/* DARK: dark grey, not pure black */
+[data-theme="dark"] {
+  --bg: #1F1F22;
+  --pane: #25252A;
+  --panel: #2C2C32;
+  --panel-2: #34343A;
+  --fg: #E8E6E0;
+  --muted: #A8A6A0;
+  --border: #45454C;
+  --border-strong: #6B6B73;
+  --accent: #6BA0E5;
+  --accent-fg: #0E0E12;
+  --ok: #6FD18C;
+  --bad: #F08894;
+  --warn: #E8B868;
+  --focus: #F2A24E;
+  --code-bg: #1A1A1E;
+  --code-fg: #E8E6E0;
+  --runner-bg: #0F0F12;
+  --runner-fg: #F4F2EC;
+  --shadow-1: 0 1px 2px rgba(0,0,0,.4), 0 2px 6px rgba(0,0,0,.3);
+}
+
+[data-font="dyslexic"] { --font-body: "OpenDyslexic", "Comic Sans MS", "Verdana", sans-serif; }
+[data-font="system"]   { --font-body: system-ui, "Segoe UI", sans-serif; }
+
+/* Size and line height come from level 1..5; level 3 is default */
+[data-size="1"] { --fs: 15px; --line: 1.4; }
+[data-size="2"] { --fs: 16px; --line: 1.5; }
+[data-size="3"] { --fs: 18px; --line: 1.6; }
+[data-size="4"] { --fs: 20px; --line: 1.7; }
+[data-size="5"] { --fs: 23px; --line: 1.8; }
+
+/* Universal border-box. Without this, elements that combine height
+   and padding (notably .main with padding: 24px 28px and height: 100%)
+   overflow their grid track by twice the padding amount, which makes
+   the central pane visibly taller than the side panes. */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { background: var(--bg); color: var(--fg); }
+html, body { height: 100%; min-height: 100vh; overflow: hidden; }
+body {
+  font-family: var(--font-body);
+  font-size: var(--fs);
+  line-height: var(--line);
+  letter-spacing: var(--letter);
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+}
+[data-motion="off"] * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+
+/* Skip link */
+.skip { position: absolute; top: -100px; left: 0; }
+.skip-link { background: var(--accent); color: var(--accent-fg); padding: 8px 14px; border-radius: 0 0 8px 0; display: inline-block; text-decoration: none; }
+.skip:focus-within { top: 0; z-index: 1000; }
+
+*:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Hidden live regions */
+.live {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0;
+}
+
+/* --- LAYOUT ---
+ *
+ * The app is a flex column with three children: the topbar (auto
+ * height), an optional banner (auto height, usually hidden), and the
+ * layout (flex: 1, fills remaining space). Flex with min-height: 0 is
+ * more reliable than `grid 1fr + height: 100%` for descendants — the
+ * grid track sizing can fail to propagate into a nested grid child in
+ * some Chrome layout passes, leaving pane content at intrinsic height.
+ */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
+.topbar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-1);
+  z-index: 5;
+  flex-wrap: wrap;
+}
+.topbar h1 {
+  font-size: 1.1em; font-weight: 600; margin: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  flex: 1; min-width: 140px;
+}
+.topbar .meta { color: var(--muted); font-size: 0.92em; white-space: nowrap; }
+.topbar .right { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+/* Visual gap separating the right burger from the rest of the action
+   icons so it visually mirrors the left burger / pack-title boundary. */
+.topbar-gap { display: inline-block; width: 14px; }
+
+.burger {
+  background: transparent; border: 1px solid var(--border); cursor: pointer;
+  padding: 8px 10px; border-radius: var(--radius);
+  font: inherit; min-width: 44px; min-height: 44px;
+  color: var(--fg);
+}
+.burger:hover { background: var(--panel-2); }
+
+/* Three-pane layout. .app is a flex column; this layout is flex:1
+   so it takes the remaining vertical space below the topbar.
+
+   `grid-template-rows: minmax(0, 1fr)` forces the single row to be a
+   definite size constrained by the grid container's height, instead
+   of being sized by its tallest child's intrinsic height. Without
+   this constraint, a wide chrome of activity content can push the row
+   beyond the viewport and the side panes match the inflated row. */
+.layout {
+  display: grid;
+  grid-template-columns: var(--tl-w, 280px) 1fr var(--sp-w, 380px);
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+  transition: grid-template-columns 0.2s ease;
+}
+.layout.tl-collapsed { grid-template-columns: 0 1fr var(--sp-w, 380px); }
+.layout.sp-collapsed { grid-template-columns: var(--tl-w, 280px) 1fr 0; }
+.layout.tl-collapsed.sp-collapsed { grid-template-columns: 0 1fr 0; }
+/* Welcome mode: no pack loaded yet, so the side panes have nothing in
+   them — collapse both so the landing page gets the full canvas. We
+   also zero out their borders so no 1-pixel hairline is left behind. */
+.layout.welcome-mode {
+  grid-template-columns: 0 1fr 0 !important;
+}
+.layout.welcome-mode .task-list,
+.layout.welcome-mode .side-panel {
+  border: 0;
+  overflow: hidden;
+}
+/* When the user is actively dragging, disable the transition for
+   responsive feedback. */
+.layout.resizing { transition: none; }
+
+@media (max-width: 1280px) {
+  /* Small screens: both side panes start CLOSED so the activity/preview gets
+     the full width. Each burger opens its own pane — left = tl-open (task
+     list), right = sp-open (properties) — mirroring each other. minmax caps
+     the open width so on the narrowest phones the pane takes what space it
+     can and the main pane shrinks gracefully instead of overflowing. */
+  .layout { grid-template-columns: 0 1fr 0; }
+  .layout.tl-open { grid-template-columns: minmax(0, var(--tl-w, 280px)) 1fr 0; }
+  .layout.sp-open { grid-template-columns: 0 1fr minmax(0, var(--sp-w, 380px)); }
+  .layout.tl-open.sp-open { grid-template-columns: minmax(0, var(--tl-w, 280px)) 1fr minmax(0, var(--sp-w, 380px)); }
+}
+
+.task-list, .side-panel {
+  background: var(--pane);
+  overflow-x: hidden;
+  min-width: 0;
+  min-height: 0;
+  /* Belt-and-braces: grid stretch should give us the full row height
+     (the parent uses grid-template-rows: minmax(0, 1fr)) but we also
+     set explicit 100% as a defensive measure for any browser pass
+     that doesn't propagate stretch into nested flex/grid containers. */
+  height: 100%;
+}
+/* The task list still scrolls as a single column. The 1px border is
+   omitted — the pane's background colour already differentiates it
+   from the main pane, and an extra dark line read as harsh in the
+   light theme. */
+.task-list {
+  position: relative;
+  /* Override the default scrolling behaviour — we want the scroll to
+     happen INSIDE .task-list-scroll instead so the resize handle stays
+     in a fixed position regardless of scroll offset. Both apps use
+     this structure. */
+  overflow-y: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.task-list-scroll {
+  /* The actual scrollable region inside .task-list. flex:1 fills the
+     remaining vertical space; min-height:0 lets it shrink so it
+     scrolls instead of pushing the footer below the viewport. */
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.task-list-footer {
+  /* Sticky footer area below the scroll region. Used by the teacher
+     tool for the "+ Add activity" button; the student tool currently
+     has no footer content but the structure is shared. */
+  flex-shrink: 0;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--pane);
+}
+/* The side panel is laid out as a flex column with two visible regions:
+   the .feedback-stack (flex: 1, scrollable) and .help-section
+   (flex-shrink: 0, pinned to the bottom edge). The panel itself never
+   scrolls — the feedback-stack inside it does. */
+.side-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.feedback-stack {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Restore the original 16px horizontal padding that lived on the
+     side panel itself. The panel no longer needs it because content
+     now lives inside this sub-pane. */
+  padding: 0;
+}
+.task-list[hidden], .side-panel[hidden] { display: none; }
+/* =====================================================================
+ * Pane resize handles
+ *
+ * Both side panes have a draggable handle on their inner edge:
+ *   .task-list  → handle on the RIGHT edge (drag right to widen)
+ *   .side-panel → handle on the LEFT edge  (drag left to widen)
+ *
+ * Each handle is always visible — a 7-pixel coloured bar with a
+ * three-dot grip pattern in the middle so it reads as draggable.
+ * Hover and active states bump the colour up to the accent so the
+ * student knows it's interactive.
+ * ===================================================================== */
+.pane-resize {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 12px;
+  cursor: ew-resize;
+  z-index: 6;
+  /* Subtle bar — transparent at rest, lightly tinted on hover. The
+     three-dot grip in the middle does the visual work of advertising
+     that the handle is draggable. */
+  background: transparent;
+  display: flex; align-items: center; justify-content: center;
+  transition: background-color 0.15s ease;
+}
+.pane-resize.pane-resize-right { right: -6px; }   /* task-list  → right edge */
+.pane-resize.pane-resize-left  { left: -6px; }    /* side-panel → left edge */
+.pane-resize::after {
+  content: "";
+  display: block;
+  width: 4px;
+  height: 56px;
+  /* Larger, darker dots so the grip is unambiguous even when the bar
+     is transparent. Spacing is 8px row repeat with 1.8px radius dots,
+     giving a denser, more "button-like" pattern. */
+  background-image: radial-gradient(circle, var(--border-strong) 1.6px, transparent 2px);
+  background-size: 4px 8px;
+  background-repeat: repeat-y;
+  background-position: center;
+  transition: background-image 0.15s ease;
+}
+.pane-resize:hover,
+.layout.resizing .pane-resize {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .pane-resize:hover,
+  .layout.resizing .pane-resize { background: rgba(45, 91, 166, 0.14); }
+}
+.pane-resize:hover::after,
+.layout.resizing .pane-resize::after {
+  background-image: radial-gradient(circle, var(--accent) 1.8px, transparent 2.2px);
+}
+[data-theme="dark"] .pane-resize::after {
+  background-image: radial-gradient(circle, var(--border-strong) 1.6px, transparent 2px);
+}
+[data-theme="dark"] .pane-resize:hover::after,
+[data-theme="dark"] .layout.resizing .pane-resize::after {
+  background-image: radial-gradient(circle, #FFFFFF 1.8px, transparent 2.2px);
+}
+[data-theme="hc"] .pane-resize::after {
+  background-image: radial-gradient(circle, var(--fg) 1.8px, transparent 2.2px);
+}
+/* Hide handles when the pane is collapsed (they'd be in the wrong
+   place and confuse the eye). */
+.tl-collapsed .task-list .pane-resize,
+.sp-collapsed .side-panel .pane-resize { display: none; }
+/* In welcome mode the handles must also be hidden — both panes are
+   width 0 so a sliver of handle would peek into the main area. */
+.welcome-mode .pane-resize { display: none; }
+
+/* Collapsed panes: hide overflow content, keep them as grid children so
+   the main pane stays in the middle column. The 0-width track does the
+   visual hiding; `display: none` would reflow grid items into wrong slots. */
+.tl-collapsed .task-list, .sp-collapsed .side-panel {
+  overflow: hidden;
+  border: 0;
+}
+
+.task-list h2, .side-panel h2 {
+  font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--muted); margin: 0; padding: 14px 16px 8px;
+  font-weight: 600;
+}
+
+.task-list ol { list-style: none; padding: 0; margin: 0; }
+
+/* Drag-reorder affordances. */
+.tl-handle {
+  flex: 0 0 auto;
+  cursor: grab;
+  color: var(--muted);
+  font-size: 0.95em;
+  line-height: 1;
+  padding: 0 2px;
+  margin-left: 4px;
+  align-self: center;
+  user-select: none;
+  opacity: 0.4;
+}
+.tl-handle:hover { opacity: 1; }
+.tl-handle:active { cursor: grabbing; }
+.tl-handle-fixed { visibility: hidden; }
+.tl-dragging { opacity: 0.45; }
+.task-row.tl-drop-before { box-shadow: inset 0 2px 0 0 var(--accent); }
+.task-row.tl-drop-after  { box-shadow: inset 0 -2px 0 0 var(--accent); }
+.task-group-head-row.tl-drop-before { box-shadow: inset 0 2px 0 0 var(--accent); }
+.task-group-head-row.tl-drop-after  { box-shadow: inset 0 -2px 0 0 var(--accent); }
+.task-group-head-row.tl-drop-into,
+.task-empty-row.tl-drop-into { outline: 2px dashed var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+.tl-add-section { margin-top: 6px; width: 100%; }
+/* Activity row: the block itself carries the colour bar + borders; the handle
+   sits just inside it (after the bar), then the clickable button fills the
+   rest with a transparent background so the whole row reads as one tile —
+   matching the student tool's activity list. */
+.task-list li.task-row {
+  display: flex;
+  align-items: stretch;
+  background: color-mix(in srgb, var(--activity-colour, var(--pane)) 8%, var(--pane));
+  border-left: 5px solid var(--activity-colour, transparent);
+  border-bottom: 1px solid var(--border);
+}
+.task-list li.task-row:hover {
+  background: color-mix(in srgb, var(--activity-colour, var(--pane)) 18%, var(--pane));
+}
+.task-list li.task-row.current {
+  background: color-mix(in srgb, var(--activity-colour, var(--accent)) 24%, var(--pane));
+  border-left-width: 7px;
+}
+.task-list li.task-row.current > button { font-weight: 600; }
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .task-list li.task-row { background: var(--pane); }
+  .task-list li.task-row:hover { background: var(--panel-2); }
+  .task-list li.task-row.current { background: var(--panel-2); }
+}
+.task-list li.task-row > .tl-handle { display: flex; align-items: center; }
+.task-list li.task-row > button {
+  flex: 1 1 auto; width: auto;
+  background: transparent;
+  border: 0;
+  border-left: 0;
+  border-radius: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 10px 16px 10px 4px;
+  min-height: 44px;
+}
+.task-list li.task-row > button:hover { background: transparent; }
+.task-list li > button {
+  width: 100%; text-align: left;
+  background: color-mix(in srgb, var(--activity-colour, var(--pane)) 8%, var(--pane));
+  border: 0;
+  padding: 10px 16px;
+  cursor: pointer; font: inherit; color: var(--fg);
+  display: flex; align-items: center; gap: 10px;
+  border-left: 5px solid var(--activity-colour, transparent);
+  border-bottom: 1px solid var(--border);
+  min-height: 44px;
+}
+.task-list li > button:hover {
+  background: color-mix(in srgb, var(--activity-colour, var(--pane)) 18%, var(--pane));
+}
+.task-list li.current > button {
+  background: color-mix(in srgb, var(--activity-colour, var(--accent)) 24%, var(--pane));
+  /* Current item: keep the type-colour bar but make it noticeably
+     thicker so it's the dominant visual marker. */
+  border-left-width: 7px;
+  padding-left: 14px;
+  font-weight: 600;
+}
+/* When color-mix isn't available the fallback above renders the bar
+   colour but no background tint, which is still fine. */
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .task-list li > button { background: var(--pane); }
+  .task-list li > button:hover { background: var(--panel-2); }
+  .task-list li.current > button { background: var(--panel-2); }
+}
+.task-list .status {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 50%;
+  font-size: 0.85em; font-weight: 600;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+/* Small abbreviated type pill in the task list (3-letter codes:
+   pre, par, mod, bug, clo, tra, cha). Background colour is set
+   inline from Constants.TYPE_COLOURS so each type stays glanceable
+   even when activity rows inherit the section colour as their bar
+   tint. Intentionally unobtrusive — small, non-bold, lowercase. */
+.task-list .type-pill-abbrev {
+  display: inline-block;
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 0.68em;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  color: #FFFFFF;
+  font-family: var(--font-mono);
+  line-height: 1.5;
+  margin-left: 4px;
+}
+[data-theme="hc"] .task-list .type-pill-abbrev {
+  background: var(--bg) !important;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+.task-list .task-title {
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.status.not_started { background: var(--panel); color: var(--muted); }
+.status.in_progress { background: #FFF1D6; color: var(--warn); border-color: var(--warn); }
+.status.correct    { background: #E2F1E8; color: var(--ok);   border-color: var(--ok); }
+.status.incorrect  { background: #FCE4E6; color: var(--bad);  border-color: var(--bad); }
+.status.revealed   { background: #E8E4F1; color: #4A3580; border-color: #4A3580; }
+
+/* Group headers (Activities, Completed, and any custom section).
+   Match the Activities/Feedback h2 styling. Sections get an additional
+   SECTION label above the title. */
+.task-group {
+  border-top: 1px solid var(--border);
+}
+.task-group:first-child { border-top: 0; }
+.task-list li.task-group .task-group-head-row > button.task-group-header,
+.task-list li.task-group > button.task-group-header {
+  width: 100%; text-align: left;
+  background: transparent;
+  /* Override the .task-list li > button defaults */
+  padding: 12px 8px 6px 4px;
+  cursor: pointer; font: inherit; color: var(--muted);
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  min-height: 36px;
+  border: 0;
+  border-radius: 0;
+  appearance: none;
+  -webkit-appearance: none;
+}
+/* The section head-row is the block: it carries the colour bar and the bottom
+   border, so the handle, header text and the rename/delete icons all sit
+   inside one tile (after the colour bar). */
+.task-group-head-row {
+  display: flex; align-items: stretch; gap: 0;
+  border-left: 7px solid var(--task-section-colour, transparent);
+  border-bottom: 1px solid var(--border);
+}
+.task-group.title-only .task-group-head-row { border-left-color: transparent; }
+.task-group-head-row .task-group-header { flex: 1 1 auto; }
+.task-group-head-row .tl-handle { display: flex; align-items: center; }
+.task-list li.task-group.is-current .task-group-head-row {
+  background: color-mix(in srgb, var(--task-section-colour, var(--pane)) 18%, var(--pane));
+}
+.task-group-head-row:hover {
+  background: color-mix(in srgb, var(--task-section-colour, var(--panel-2)) 12%, var(--pane));
+}
+.task-list li.task-group.is-current .task-group-head-row:hover {
+  background: color-mix(in srgb, var(--task-section-colour, var(--panel-2)) 28%, var(--pane));
+}
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .task-list li.task-group.is-current .task-group-head-row { background: var(--panel-2); }
+  .task-group-head-row:hover { background: var(--panel-2); }
+}
+.task-list li.task-group.is-current .task-group-header { color: var(--fg); }
+.task-group-head-row:hover .task-group-header { color: var(--fg); }
+/* Section rename / delete: inside the block, faded, no border, on a faintly
+   contrasting background so they read as secondary controls. */
+.task-group-head-row .tl-sec-btn.btn,
+.tl-sec-btn {
+  flex: 0 0 auto;
+  align-self: center;
+  border: 0;
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+  color: var(--muted);
+  opacity: 0.6;
+  padding: 4px 7px;
+  margin: 0 1px;
+  min-height: 0;
+  min-width: 0;
+  font-size: 0.95em;
+  border-radius: 6px;
+  cursor: pointer;
+  line-height: 1;
+}
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .tl-sec-btn { background: var(--panel-2); }
+}
+.task-group-head-row .tl-sec-btn.btn:hover,
+.tl-sec-btn:hover {
+  opacity: 1;
+  filter: none;
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .tl-sec-btn:hover { background: var(--panel-2); }
+}
+.task-group-header .chev {
+  display: inline-block; width: 12px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  transition: transform 0.15s ease;
+}
+.task-group.collapsed .chev { transform: rotate(-90deg); }
+.task-group.collapsed .task-group-body { display: none; }
+.task-group-body { list-style: none; padding: 0; margin: 0; }
+.task-group-empty { padding: 6px 16px 10px 30px; font-style: italic; }
+
+/* Two-line layout for section groups: SECTION label on top, title below */
+.task-group .group-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.task-group .group-kicker {
+  font-size: 0.72em;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+.task-group .group-title {
+  font-size: 1em;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-weight: 600;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* When a group is "title only" (Completed) the kicker is the only line
+   and uses the same style as the static h2 headings (Activities,
+   Feedback) — uppercase, normal weight, muted, no thick coloured bar. */
+.task-group.title-only .group-text { flex-direction: row; }
+.task-group.title-only .group-title { display: none; }
+.task-group.title-only .group-kicker {
+  font-size: 1em;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+/* In high-contrast mode, suppress per-section colour coding to keep the
+   yellow-on-black palette uniform. */
+[data-theme="hc"] .task-list li.task-group .task-group-head-row {
+  border-left-color: transparent !important;
+  background: var(--pane) !important;
+}
+[data-theme="hc"] .task-list li.task-group.is-current .task-group-head-row {
+  background: var(--panel-2) !important;
+}
+/* High contrast: the faint tiles don't read on black — give the handle full
+   contrast and the section icons a clear bordered tile. */
+[data-theme="hc"] .tl-handle { color: var(--fg); opacity: 1; }
+[data-theme="hc"] .tl-sec-btn,
+[data-theme="hc"] .task-group-head-row .tl-sec-btn.btn {
+  background: var(--panel) !important;
+  color: var(--fg) !important;
+  opacity: 1 !important;
+  border: 1px solid var(--border) !important;
+}
+[data-theme="hc"] .tl-sec-btn:hover { background: var(--panel-2) !important; }
+/* Dark theme: tint the current section header using the section colour
+   blended into the dark pane bg so it's clearly visible without being
+   garish. Non-current sections stay flat. */
+[data-theme="dark"] .task-list li.task-group.is-current .task-group-head-row {
+  background: color-mix(in srgb, var(--task-section-colour, var(--pane)) 28%, var(--pane));
+}
+[data-theme="dark"] .task-list li.task-group.is-current .task-group-head-row:hover {
+  background: color-mix(in srgb, var(--task-section-colour, var(--panel-2)) 40%, var(--pane));
+}
+
+/* Section-complete tick — green ✓ on the right of the section header
+   when every activity in the section is correct. Uses the OK colour
+   from the active theme so it stays readable across light/dark/HC. */
+.group-complete-tick {
+  margin-left: auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--ok);
+  color: var(--accent-fg, #FFFFFF);
+  font-weight: 700;
+  font-size: 0.85em;
+  flex-shrink: 0;
+}
+[data-theme="hc"] .group-complete-tick { color: #000000; }
+/* When the section is complete, dial the rest of the header back so the
+   tick is what catches the eye — keeps the panel from looking noisy. */
+.task-group.section-complete .group-kicker,
+.task-group.section-complete .group-title {
+  opacity: 0.7;
+}
+
+/* --- MAIN --- */
+.main {
+  padding: 24px 28px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg);
+  height: 100%;
+}
+/* When the centre pane holds the live preview it manages its own padding
+   and scrolling, so strip the outer padding/scroll to avoid a double
+   scrollbar and let the preview header sit flush. */
+.main:has(.live-preview) { padding: 0; overflow: hidden; }
+
+.activity-header {
+  display: flex; align-items: center; gap: 16px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.activity-header h1.activity-title {
+  font-size: 1.5em; font-weight: 600; margin: 0;
+  flex: 1; min-width: 0;
+  /* Title can wrap; line-height keeps the badge nicely centred next to
+     the first line whether or not the title wraps. */
+  line-height: 1.25;
+}
+.difficulty-badge {
+  font-size: 1em;            /* same as title per request */
+  color: var(--warn);
+  letter-spacing: 0.05em;
+  user-select: none;
+  white-space: nowrap;
+}
+.type-badge {
+  display: inline-block;
+  background: var(--accent);
+  color: #FFFFFF;
+  font-size: 0.72em;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: lowercase;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+[data-theme="hc"] .type-badge { background: var(--accent) !important; color: var(--accent-fg) !important; }
+
+.activity-meta {
+  display: flex; gap: 12px; flex-wrap: wrap;
+  color: var(--muted); font-size: 0.9em; margin-bottom: 14px;
+}
+.activity-context {
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 10px 14px; margin-bottom: 12px;
+}
+.activity-instructions {
+  /* Tinted callout so the task description reads as a distinct block
+     rather than blending with surrounding prose. Uses the accent colour
+     at a low opacity for the background and a coloured left border to
+     anchor it visually — same paradigm as the bug/modify "inserted
+     line" treatment and the I/O panel rows. */
+  font-size: 1.02em;
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--panel));
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  line-height: 1.55;
+}
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .activity-instructions { background: #EAEFF8; }
+}
+[data-theme="dark"] .activity-instructions {
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel));
+}
+[data-theme="hc"] .activity-instructions {
+  background: var(--bg);
+  border: 1.5px solid var(--accent);
+  border-left-width: 4px;
+}
+.activity-body {
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 20px; margin-bottom: 16px;
+  box-shadow: var(--shadow-1);
+}
+
+/* Action buttons in top-right of the activity */
+.activity-actions {
+  display: flex; gap: 8px; flex-wrap: wrap;
+}
+@media (max-width: 800px) {
+  .activity-actions { flex-direction: column; align-items: stretch; }
+}
+
+/* --- SIDE PANEL --- */
+.side-panel section { padding: 16px; border-bottom: 1px solid var(--border); }
+.side-panel section:last-child { border-bottom: 0; }
+.side-panel h3 {
+  font-size: 0.95em; margin: 0 0 8px;
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600;
+}
+/* Section heading row — h3 on the left, small counter pill on the
+   right. Used by the Hints section so the student always knows how
+   many tips are available. */
+.section-heading-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.section-heading-row h3 { margin: 0; }
+.hint-counter {
+  font-size: 0.82em;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.side-panel .hint {
+  background: #FFE8C2;             /* warmer pastel orange, still WCAG-safe with --fg */
+  border-left: 4px solid #D97706;  /* stronger amber accent */
+  padding: 10px 14px;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  margin-bottom: 8px;
+  color: #1B1B1F;                   /* dark text — strong contrast on pastel */
+}
+.side-panel .hint::before {
+  content: "💡 ";
+  margin-right: 4px;
+}
+[data-theme="dark"] .side-panel .hint {
+  background: #4A3D1F; color: #FFE8B0; border-left-color: #E8B868;
+}
+[data-theme="hc"] .side-panel .hint {
+  background: var(--panel-2); color: var(--fg); border-left-color: var(--accent);
+}
+.side-panel .feedback {
+  padding: 10px 14px; border-radius: var(--radius); margin-bottom: 6px;
+  font-weight: 500;
+}
+.feedback.correct   { background: #E2F1E8; color: var(--ok);  border: 1px solid var(--ok); }
+.feedback.incorrect { background: #FCE4E6; color: var(--bad); border: 1px solid var(--bad); }
+[data-theme="dark"] .feedback.correct,
+[data-theme="dark"] .feedback.incorrect {
+  background: var(--panel-2); color: var(--fg);
+}
+[data-theme="dark"] .feedback.correct   { border-left: 4px solid var(--ok); }
+[data-theme="dark"] .feedback.incorrect { border-left: 4px solid var(--bad); }
+[data-theme="hc"]   .feedback.correct,
+[data-theme="hc"]   .feedback.incorrect {
+  background: #000000; color: var(--fg); border-color: var(--fg);
+}
+[data-theme="hc"]   .feedback.correct   { border-left: 4px solid var(--ok); }
+[data-theme="hc"]   .feedback.incorrect { border-left: 4px solid var(--bad); }
+.feedback::before {
+  display: inline-block; margin-right: 6px; font-weight: 700;
+}
+.feedback.correct::before   { content: "✓ "; }
+.feedback.incorrect::before { content: "✗ "; }
+
+/* --- BUTTONS --- */
+.btn {
+  font: inherit;
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--border-strong);
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  min-height: 40px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  transition: background-color 0.12s ease, transform 0.05s ease;
+  white-space: nowrap;
+}
+.btn:hover  { background: var(--panel-2); }
+.btn:active { transform: translateY(1px); }
+.btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.btn.primary:hover { background: var(--accent); filter: brightness(0.92); }
+.btn.success { background: var(--ok); color: #fff; border-color: var(--ok); }
+.btn.ghost   { background: transparent; border: 1px dashed var(--border-strong); }
+.btn.icon    { padding: 6px 10px; min-height: 36px; min-width: 36px; }
+.btn.icon-only {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  font-size: 1.1em;
+  font-weight: 600;
+}
+.btn.danger  { background: transparent; color: var(--bad); border-color: var(--bad); }
+.btn.danger:hover { background: var(--panel-2); }
+.btn.hint-btn {
+  background: #FFE8C2;
+  color: #1B1B1F;
+  border: 1px solid #D97706;
+}
+.btn.hint-btn:hover { background: #FFD68A; }
+[data-theme="dark"] .btn.hint-btn { background: #4A3D1F; color: #FFE8B0; border-color: #E8B868; }
+[data-theme="hc"] .btn.hint-btn { background: var(--panel-2); color: var(--fg); border-color: var(--accent); }
+
+/* Reveal-answer button — 3-press progression (yellow → orange → red).
+   Each stage uses a darker, warmer colour to discourage casual peeking. */
+.btn.reveal-btn { background: var(--panel); color: var(--fg); border: 1px solid var(--border-strong); transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease; }
+.btn.reveal-btn:hover { background: var(--panel-2); }
+.btn.reveal-btn.stage-1 { background: #FFE8C2; color: #1B1B1F; border-color: #D97706; }
+.btn.reveal-btn.stage-1:hover { background: #FFD68A; }
+.btn.reveal-btn.stage-2 { background: #FB923C; color: #1B1B1F; border-color: #C2410C; }
+.btn.reveal-btn.stage-2:hover { background: #F97316; color: #FFFFFF; }
+.btn.reveal-btn.stage-3 { background: #DC2626; color: #FFFFFF; border-color: #991B1B; }
+.btn.reveal-btn.stage-3:hover { background: #B91C1C; }
+[data-theme="hc"] .btn.reveal-btn.stage-1,
+[data-theme="hc"] .btn.reveal-btn.stage-2,
+[data-theme="hc"] .btn.reveal-btn.stage-3 { background: var(--panel-2) !important; color: var(--fg) !important; border-color: var(--bad) !important; }
+
+/* Banners */
+.banner {
+  padding: 8px 16px; background: #FFF7E6; color: var(--warn);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.92em;
+}
+.banner.error { background: #FCE4E6; color: var(--bad); }
+[data-theme="dark"] .banner, [data-theme="hc"] .banner {
+  background: var(--panel-2); color: var(--fg); border-left: 4px solid var(--warn);
+}
+[data-theme="dark"] .banner.error, [data-theme="hc"] .banner.error {
+  background: #4A1A20; color: var(--fg); border-left: 4px solid var(--bad);
+}
+[data-theme="dark"] .banner.error, [data-theme="hc"] .banner.error { background: var(--panel-2); color: var(--bad); }
+
+/* Code blocks */
+.code-block {
+  background: var(--code-bg); color: var(--code-fg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  overflow-x: auto;
+}
+.code-block pre  { margin: 0; font-family: var(--font-mono); font-size: 0.95em; line-height: 1.5; white-space: pre; }
+.code-block code { font-family: var(--font-mono); }
+.code-block.with-lines pre { display: flex; flex-direction: column; gap: 0; }
+.code-row { display: flex; gap: 12px; align-items: flex-start; }
+.code-ln {
+  color: var(--muted); font-family: var(--font-mono); font-size: 0.85em;
+  user-select: none; min-width: 1.8em; text-align: right;
+  padding-right: 4px; border-right: 1px solid var(--border);
+}
+.code-src { font-family: var(--font-mono); white-space: pre; }
+
+/* --- MODAL --- */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(20,18,12,0.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+[data-theme="dark"] .modal-backdrop, [data-theme="hc"] .modal-backdrop { background: rgba(0,0,0,0.7); }
+.modal {
+  background: var(--bg);
+  color: var(--fg);
+  border-radius: var(--radius-lg);
+  max-width: 720px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: auto;
+  box-shadow: var(--shadow-1);
+  border: 1px solid var(--border-strong);
+}
+.modal header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.modal header h2 { margin: 0; font-size: 1.2em; }
+.modal .modal-body { padding: 20px; }
+.modal-footer { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+
+/* Modal form rows — tidier than the editor's grid.
+   Default rows stack label above control. The .inline variant puts the
+   label on the left and the control on the right, on a single line. */
+.modal .field-row {
+  display: flex; flex-direction: column; gap: 6px;
+  margin-bottom: 14px;
+}
+.modal .field-row.inline {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.modal .field-row.inline .field-label {
+  display: flex; align-items: center; gap: 6px;
+  flex: 0 0 auto;
+  font-weight: 500;
+  font-size: 0.95em;
+}
+.modal .field-row.inline .field-label label {
+  margin: 0;
+  font-weight: 500;
+}
+.modal .field-row.inline > select {
+  flex: 0 1 auto;
+  max-width: 280px;
+}
+/* Small "ⓘ" info button beside a setting label. Opens a popup. */
+.field-info-btn {
+  width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  font-size: 0.85em;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+.field-info-btn:hover {
+  background: var(--panel-2); color: var(--fg); border-color: var(--border-strong);
+}
+.field-info-btn:focus {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+/* Inline radio group for 2-3-option settings (theme, motion, font…). */
+.radio-group {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  flex: 0 1 auto;
+}
+.radio-option {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--panel);
+  cursor: pointer;
+  font-size: 0.88em;
+  user-select: none;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+  white-space: nowrap;
+}
+.radio-option input[type="radio"] {
+  margin: 0;
+  accent-color: var(--accent);
+}
+.radio-option:hover {
+  background: var(--panel-2);
+  border-color: var(--accent);
+}
+.radio-option:has(input:checked) {
+  background: color-mix(in srgb, var(--accent) 16%, var(--panel));
+  border-color: var(--accent);
+  color: var(--fg);
+}
+@supports not (selector(:has(*))) {
+  .radio-option input[type="radio"]:checked + span { font-weight: 600; }
+}
+[data-theme="dark"] .radio-option:has(input:checked) {
+  background: #1F3A5E;
+}
+
+.modal .field-row select,
+.modal .field-row input[type="text"],
+.modal .field-row input[type="number"] {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--fg);
+  width: 100%;
+}
+.modal .field-group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  background: var(--panel);
+}
+.modal .field-group h3 {
+  margin: 0 0 10px;
+  font-size: 0.85em; text-transform: uppercase; color: var(--muted); letter-spacing: 0.04em;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center; padding: 48px 24px; color: var(--muted);
+}
+.empty-state h2 { color: var(--fg); margin-bottom: 8px; }
+
+/* Helpers */
+.kbd-help { font-size: 0.85em; color: var(--muted); margin: 4px 0; }
+.help     { font-size: 0.85em; color: var(--muted); margin: 4px 0; }
+.muted    { color: var(--muted); }
+
+/* Animations (suppressed by reduced motion) */
+@keyframes flashOk  { 0%,100% { box-shadow: none; } 50% { box-shadow: 0 0 0 4px rgba(30,110,60,0.25) inset; } }
+@keyframes flashBad { 0%,100% { box-shadow: none; } 50% { box-shadow: 0 0 0 4px rgba(177,42,56,0.25) inset; } }
+
+/* --- Runner panel (lives in the side panel) --- */
+.runner-panel-title { display: flex; align-items: center; gap: 8px; }
+.runner-output {
+  min-height: 60px;
+  background: var(--runner-bg);
+  color: var(--runner-fg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.88em;        /* a touch smaller, not excessively */
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 6px 0;
+}
+.runner-output .stderr { color: #FF8888; }
+.runner-status { font-size: 0.82em; color: var(--muted); margin: 4px 0; }
+.runner-spinner {
+  display: inline-block; width: 12px; height: 12px;
+  border: 2px solid var(--border); border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: pyq-spin 0.8s linear infinite;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+@keyframes pyq-spin { to { transform: rotate(360deg); } }
+
+/* Confetti */
+.confetti-layer {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 9999;
+}
+.confetti-piece {
+  position: absolute;
+  top: -20px;
+  border-radius: 1px;
+  animation: pyq-confetti-fall linear forwards;
+  will-change: transform, opacity;
+}
+@keyframes pyq-confetti-fall {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: translate3d(var(--drift, 0), 100vh, 0) rotate(var(--rot-end, 360deg)); opacity: 0; }
+}
+
+/* =====================================================================
+ * Per-type help section in the side panel.
+ *
+ * A <details> element pinned to the bottom of the side panel via
+ * position: sticky. Open by default. The disclosure triangle on the
+ * left of the summary lets the student collapse it. Collapsed state
+ * is persisted via Settings.show_help.
+ * ===================================================================== */
+/* =====================================================================
+ * Per-type help section in the side panel.
+ *
+ * The help section is the bottom sub-pane of the side panel. The side
+ * panel is a flex column where .feedback-stack takes flex:1 and
+ * .help-section is flex-shrink:0 — so it always sits at the panel's
+ * bottom edge regardless of how much content is above it.
+ *
+ * Open by default. The disclosure triangle on the left of the summary
+ * lets the student collapse it. State persists via Settings.show_help.
+ * ===================================================================== */
+.help-section {
+  flex-shrink: 0;
+  background: var(--panel-2);
+  border-top: 1px solid var(--border);
+  padding: 0 16px;
+  /* When the help section is open, cap its height at half the side
+     panel so the feedback stack always remains usable above it. */
+  max-height: 50%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.help-section > summary {
+  list-style: none;
+  cursor: pointer;
+  /* Extra top padding so the disclosure triangle has breathing room
+     from the divider line above. Also keeps the rotated triangle (▼)
+     fully visible when the section is open instead of clipping. */
+  padding: 16px 0 14px;
+  font-weight: 600;
+  font-size: 0.95em;
+  color: var(--fg);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+}
+.help-section > summary::-webkit-details-marker { display: none; }
+/* Disclosure triangle — points right when closed, down when open.
+   We draw it ourselves so it stays consistent across browsers. The
+   triangle uses inline-flex with a fixed size so it doesn't get clipped
+   when rotated. */
+.help-section > summary::before {
+  content: "▶";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65em;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  transform-origin: center;
+}
+.help-section[open] > summary::before { transform: rotate(90deg); }
+.help-summary-text { flex: 1; }
+.help-summary-count {
+  color: var(--muted);
+  font-size: 0.85em;
+  font-weight: 400;
+}
+.help-list {
+  margin: 0;
+  padding: 0 0 14px 22px;
+}
+.help-list li {
+  margin: 6px 0;
+  font-size: 0.92em;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.help-list li::marker { color: var(--muted); }
+[data-theme="dark"] .help-section { background: var(--panel-2); border-top-color: var(--border-strong); }
+[data-theme="hc"] .help-section { background: #000000; border-top: 2px solid var(--fg); }
+
+/* =====================================================================
+ * Welcome / landing page — shown when no pack is loaded.
+ * Marketing layout: hero, feature grid, activity-type cards, footer CTA.
+ * ===================================================================== */
+.welcome {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 8px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 56px;
+}
+.welcome-hero {
+  text-align: center;
+  padding: 48px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.welcome-logo {
+  font-family: var(--font-mono);
+  font-size: 3.2em;
+  font-weight: 700;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  width: 96px; height: 96px;
+  border-radius: 24px;
+  display: flex; align-items: center; justify-content: center;
+  letter-spacing: -0.05em;
+  margin-bottom: 4px;
+}
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .welcome-logo { background: rgba(45,91,166,0.12); }
+}
+.welcome-title {
+  font-size: 2.6em;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+.welcome-tagline {
+  max-width: 620px;
+  font-size: 1.15em;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
+}
+.welcome-cta {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  margin-top: 12px;
+}
+.welcome-cta-hint {
+  color: var(--muted);
+  font-size: 0.9em;
+  margin: 0;
+}
+.btn.big {
+  font-size: 1.05em;
+  padding: 12px 24px;
+  min-height: 48px;
+}
+.welcome-section h2 {
+  font-size: 1.6em;
+  font-weight: 600;
+  margin: 0 0 8px;
+  letter-spacing: -0.01em;
+}
+.welcome-section > p {
+  color: var(--muted);
+  max-width: 720px;
+  margin: 0 0 24px;
+}
+.welcome-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+.welcome-feature {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.welcome-feature-icon {
+  font-size: 1.6em;
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  display: inline-flex; align-items: center; justify-content: center;
+  margin-bottom: 6px;
+}
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .welcome-feature-icon { background: rgba(45,91,166,0.14); }
+}
+.welcome-feature h3 { margin: 0; font-size: 1.05em; font-weight: 600; }
+.welcome-feature p  { margin: 0; color: var(--muted); font-size: 0.95em; line-height: 1.5; }
+
+.welcome-types {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+.welcome-type {
+  --type-colour: var(--accent);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 5px solid var(--type-colour);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.welcome-type-head { display: flex; align-items: center; }
+.welcome-type-badge {
+  background: color-mix(in srgb, var(--type-colour) 18%, var(--panel));
+  color: var(--type-colour);
+  font-weight: 600;
+  font-size: 0.95em;
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .welcome-type-badge { background: var(--panel-2); }
+}
+.welcome-type-desc { margin: 0; line-height: 1.5; }
+.welcome-type-sample {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  overflow-x: auto;
+  white-space: pre;
+  color: var(--fg);
+}
+.welcome-type-value { margin: 0; color: var(--muted); font-size: 0.9em; line-height: 1.5; }
+
+.welcome-footer {
+  text-align: center;
+  padding: 32px 16px;
+  border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.welcome-footer h2 { margin: 0; }
+
+/* Theme overrides: dark / HC */
+[data-theme="dark"] .welcome-feature,
+[data-theme="dark"] .welcome-type {
+  /* Use the brighter elevated-panel colour so cards stand clearly proud
+     of the body background instead of being barely-distinguishable. */
+  background: var(--panel-2);
+  border-color: var(--border-strong);
+  color: var(--fg);
+}
+[data-theme="dark"] .welcome-feature p,
+[data-theme="dark"] .welcome-feature h3,
+[data-theme="dark"] .welcome-type-desc,
+[data-theme="dark"] .welcome-type-value { color: var(--fg); }
+/* The type badge — pin a bright shade of the type colour and a strong
+   tinted background so it pops against the dark card. The light-theme
+   color-mix produces too-dim text on the dark panel. */
+[data-theme="dark"] .welcome-type-badge {
+  background: color-mix(in srgb, var(--type-colour) 28%, #1A1A1F);
+  color: #FFFFFF;
+  border: 1px solid color-mix(in srgb, var(--type-colour) 55%, #1A1A1F);
+}
+@supports not (background: color-mix(in srgb, red, blue)) {
+  [data-theme="dark"] .welcome-type-badge { background: #45454C; color: #FFFFFF; border-color: #6B6B73; }
+}
+[data-theme="dark"] .welcome-type {
+  /* The 5px coloured left bar drives the visual identity of the card
+     — make sure it shows through even on the elevated panel. The bar
+     already uses --type-colour but in dark mode some of the base
+     palette colours are too dark to read, so override at runtime via
+     a brighter overlay. */
+  box-shadow: inset 5px 0 0 0 var(--type-colour);
+  border-left-width: 1px;
+  padding-left: 25px;
+}
+[data-theme="dark"] .welcome-type-sample {
+  background: #1A1A1F; border-color: var(--border-strong); color: #DCDCD8;
+}
+[data-theme="dark"] .welcome-feature-icon {
+  background: color-mix(in srgb, var(--accent) 28%, #1A1A1F);
+  color: #FFFFFF;
+}
+@supports not (background: color-mix(in srgb, red, blue)) {
+  [data-theme="dark"] .welcome-feature-icon { background: #1F3A5E; color: #FFFFFF; }
+}
+[data-theme="dark"] .welcome-logo {
+  background: color-mix(in srgb, var(--accent) 24%, #1A1A1F);
+  color: #FFFFFF;
+}
+
+[data-theme="hc"] .welcome-feature,
+[data-theme="hc"] .welcome-type {
+  background: #000000; border-color: var(--fg); color: var(--fg);
+}
+[data-theme="hc"] .welcome-feature p,
+[data-theme="hc"] .welcome-feature h3,
+[data-theme="hc"] .welcome-type-desc,
+[data-theme="hc"] .welcome-type-value { color: var(--fg); }
+[data-theme="hc"] .welcome-type-sample {
+  background: #000000; border-color: var(--fg); color: var(--fg);
+}
+[data-theme="hc"] .welcome-feature-icon,
+[data-theme="hc"] .welcome-logo,
+[data-theme="hc"] .welcome-type-badge {
+  background: var(--fg); color: #000000;
+}
+
+/* =====================================================================
+ * Keyboard-shortcut pills (used in help tips and inline guidance)
+ * <kbd> elements get a small coloured background + monospace font.
+ * Different colours for modifier vs cursor/letter keys so a sequence
+ * like Ctrl + Enter reads as two distinct chunks visually.
+ * ===================================================================== */
+kbd {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  font-weight: 600;
+  line-height: 1;
+  padding: 3px 7px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  margin: 0 2px;
+  vertical-align: baseline;
+  white-space: nowrap;
+}
+/* Modifier keys — accent (blue) */
+kbd.kbd-mod {
+  background: color-mix(in srgb, var(--accent) 22%, var(--panel));
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--panel));
+}
+/* Action keys (Enter, Esc, Space) — warm amber */
+kbd.kbd-act {
+  background: color-mix(in srgb, var(--warn) 22%, var(--panel));
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 40%, var(--panel));
+}
+/* Direction / cursor keys — green */
+kbd.kbd-dir {
+  background: color-mix(in srgb, var(--ok) 22%, var(--panel));
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 40%, var(--panel));
+}
+@supports not (background: color-mix(in srgb, red, blue)) {
+  kbd.kbd-mod { background: #E6EEFB; color: var(--accent); border-color: #B6CDF1; }
+  kbd.kbd-act { background: #FFF1D6; color: var(--warn); border-color: #F0CE82; }
+  kbd.kbd-dir { background: #E2F1E8; color: var(--ok);  border-color: #B0D5BE; }
+}
+/* The + glyph between keys */
+.kbd-plus { color: var(--muted); font-weight: 600; margin: 0 1px; }
+
+[data-theme="dark"] kbd.kbd-mod { background: #1F3A5E; color: #B6CDF1; border-color: var(--accent); }
+[data-theme="dark"] kbd.kbd-act { background: #4A3A1F; color: #FFE0A0; border-color: var(--warn); }
+[data-theme="dark"] kbd.kbd-dir { background: #1F4A2B; color: #C8EAD5; border-color: var(--ok); }
+[data-theme="hc"]   kbd.kbd-mod,
+[data-theme="hc"]   kbd.kbd-act,
+[data-theme="hc"]   kbd.kbd-dir {
+  background: var(--fg); color: #000000; border-color: var(--fg);
+}
+
+/* =====================================================================
+ * About dialog — activity-type reference list + version metadata.
+ * Used from Settings → "About" → View details.
+ * ===================================================================== */
+.about-types {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.about-type {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.about-type:last-child { border-bottom: 0; }
+.about-type-swatch {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  margin-top: 4px;
+}
+.about-type-text { font-size: 0.95em; line-height: 1.5; }
+
+.about-versions {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 14px;
+  margin: 8px 0 0;
+  font-size: 0.92em;
+}
+.about-versions dt { color: var(--muted); font-weight: 500; }
+.about-versions dd { margin: 0; font-family: var(--font-mono); }
