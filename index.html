@@ -1,108 +1,286 @@
 <!DOCTYPE html>
-<html lang="en-GB" data-theme="" data-font="atkinson" data-size="18" data-line="1.6" data-motion="">
+<html lang="en-GB" data-theme="light">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="color-scheme" content="light">
-<meta name="application-name" content="PyQuiz — Student">
-<title>PyQuiz — Student</title>
-
-<link rel="stylesheet" href="student/css/css__base.css">
-<link rel="stylesheet" href="student/css/css__activities.css">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PyQuiz — algorithmic thinking, taught well</title>
+<meta name="description" content="PyQuiz turns Python and algorithmic thinking into hands-on activities for KS3 to KS5. Build a week's worth in under an hour with AI, then fine-tune in the authoring tool.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site/site.css">
 </head>
 <body>
-<div class="skip"><a href="#main-region" class="skip-link">Skip to main content</a></div>
 
-<div class="app">
-  <header class="topbar" role="banner">
-    <button id="burger" class="burger" aria-label="Toggle task list">☰</button>
-    <h1 id="pack-title">PyQuiz</h1>
-    <div class="right">
-      <button class="btn icon mobile-hide" id="size-down" aria-label="Decrease text size" title="Smaller text">A−</button>
-      <button class="btn icon mobile-hide" id="size-up" aria-label="Increase text size" title="Larger text">A+</button>
-      <button class="btn icon mobile-hide" id="theme-btn" aria-label="Cycle theme" title="Cycle theme (default / dark / high contrast)">◐</button>
-      <button class="btn icon" id="export-btn" aria-label="Export progress" title="Export progress">⤓</button>
-      <button class="btn primary" id="load-btn" aria-label="Load a pack" title="Load a .pyquiz pack from your computer"><span class="btn-icon" aria-hidden="true">📂</span><span class="btn-label"> Load pack</span></button>
-      <button class="btn icon" id="settings-btn" aria-label="Open settings" title="Settings">⚙</button>
-      <span class="topbar-gap" aria-hidden="true"></span>
-      <button id="burger-right" class="burger" aria-label="Toggle side panel" title="Toggle side panel">☰</button>
-    </div>
-  </header>
-  <div id="storage-banner" class="banner" hidden></div>
-  <div id="error-banner" class="banner error" hidden></div>
-  <div id="layout" class="layout">
-    <nav class="task-list" id="task-list" aria-label="Activities">
-      <!--
-        Inner scroll container — mirrors the teacher tool's structure
-        so the scrollbar lives INSIDE this element while the
-        .pane-resize handle (added by setupPaneResize) sits on the
-        outer .task-list. That keeps the resize grip in a fixed
-        position regardless of scroll offset and places the scrollbar
-        to the LEFT of the resize handle rather than overlapping it.
-      -->
-      <div class="task-list-scroll">
-        <h2>Activities</h2>
-        <ol id="task-ol"></ol>
-      </div>
-      <div class="task-list-footer" id="task-list-footer">
-        <div class="task-list-footer-row">
-          <span class="task-list-score-label">Score</span>
-          <span class="task-list-score" id="score" aria-label="Score">0 / 0</span>
-        </div>
-        <div class="task-list-progress" aria-hidden="true">
-          <div class="task-list-progress-fill" id="task-list-progress-fill"></div>
-        </div>
-      </div>
+<header class="site-top">
+  <div class="wrap">
+    <a class="brand" href="index.html" aria-label="PyQuiz home">
+      <svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <rect x="2" y="2" width="28" height="28" rx="7" fill="#1E3A5F"/>
+        <circle cx="10" cy="11" r="3" fill="#E07A00"/>
+        <circle cx="22" cy="11" r="3" fill="#2E8B6B"/>
+        <circle cx="16" cy="22" r="3" fill="#F4A93C"/>
+        <path d="M10 11 L16 22 L22 11" stroke="#FAF7F2" stroke-width="1.8" fill="none"/>
+      </svg>
+      PyQuiz
+    </a>
+    <nav class="site-nav">
+      <a class="navlink hide-sm" href="#why">Why it works</a>
+      <a class="navlink hide-sm" href="#workflow">Workflow</a>
+      <a class="navlink hide-sm" href="docs.html">Documentation</a>
+      <a class="navlink" href="student/index.html">Try it →</a>
     </nav>
-    <main class="main" id="main-region" tabindex="-1"></main>
-    <aside class="side-panel" id="side-panel" aria-label="Help and feedback"></aside>
   </div>
-  <span class="live" aria-live="polite" id="live-polite"></span>
-  <span class="live" aria-live="assertive" id="live-assert"></span>
-</div>
+</header>
 
-<!--
-  Script load order matters. Each layer depends on those above it.
-  Core modules self-register on the global PyQuiz namespace.
-  Adding a new activity type means: drop a renderer file under
-  js/renderers/, add a <script> tag below, no other changes needed.
--->
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <span class="eyebrow reveal d1">For Key Stage 3 → 5 Computing</span>
+      <h1 class="reveal d2">Algorithmic thinking, <span class="ink-accent">made hands-on.</span></h1>
+      <p class="lede reveal d3">PyQuiz turns Python into activities students actually do — predicting, tracing, fixing and building. A whole week's set, drafted by AI and fine-tuned by you, in under an hour.</p>
+      <div class="hero-cta reveal d4">
+        <a class="btn btn-primary btn-lg" href="student/index.html">▶ Try as a student</a>
+        <a class="btn btn-amber btn-lg" href="teacher/index.html">✎ Try as a teacher</a>
+      </div>
+      <div class="hero-tags reveal d5">
+        <span><span class="dot"></span> No install, runs in the browser</span>
+        <span><span class="dot"></span> Dyslexia-friendly by default</span>
+        <span><span class="dot"></span> Good prep for GCSE/A-Level Paper 2</span>
+      </div>
+    </div>
 
-<!-- Core (in dependency order) -->
-<script src="student/js/js__core__constants.js"></script>
-<script src="student/js/js__core__strings.js"></script>
-<script src="student/js/js__core__schema.js"></script>
-<script src="student/js/js__core__normalise.js"></script>
-<script src="student/js/js__core__codec.js"></script>
-<script src="student/js/js__core__storage.js"></script>
-<script src="student/js/js__core__validator.js"></script>
-<script src="student/js/js__core__marker.js"></script>
-<script src="student/js/js__core__code_assembly.js"></script>
-<script src="student/js/js__core__parsons.js"></script>
-<script src="student/js/js__core__pack.js"></script>
-<script src="student/js/js__core__demo.js"></script>
-<script src="student/js/js__core__built_in_packs.js"></script>
+    <div class="hero-figure reveal d3" aria-hidden="true">
+      <div class="chip-row">
+        <span class="chip">predict</span>
+        <span class="chip">trace</span>
+        <span class="chip">fix the bug</span>
+        <span class="chip">build</span>
+      </div>
+      <svg viewBox="0 0 360 300" role="img" aria-label="A small flowchart for a counting loop">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="var(--line-strong)"/>
+          </marker>
+        </defs>
+        <!-- edges -->
+        <path class="fc-edge" d="M180 44 L180 70"/>
+        <path class="fc-edge" d="M180 110 L180 134"/>
+        <path class="fc-edge flow-dash" d="M140 160 L70 160 L70 214"/>
+        <path class="fc-edge" d="M220 160 L300 160 L300 214"/>
+        <path class="fc-edge" d="M70 256 L70 280 L180 280 L180 186"/>
+        <text class="fc-elabel" x="96" y="152">yes</text>
+        <text class="fc-elabel" x="246" y="152">no</text>
+        <!-- nodes -->
+        <rect class="fc-node fc-term" x="138" y="20" width="84" height="26" rx="13"/>
+        <text class="fc-label" x="180" y="37" text-anchor="middle">start</text>
+        <rect class="fc-node" x="128" y="70" width="104" height="40" rx="4"/>
+        <text class="fc-label" x="180" y="94" text-anchor="middle">i = 0</text>
+        <polygon class="fc-node fc-dec" points="180,134 240,160 180,186 120,160"/>
+        <text class="fc-label" x="180" y="164" text-anchor="middle">i &lt; 5 ?</text>
+        <polygon class="fc-node fc-io" points="40,214 104,214 96,256 32,256"/>
+        <text class="fc-label" x="68" y="239" text-anchor="middle">print(i)</text>
+        <rect class="fc-node" x="270" y="214" width="76" height="42" rx="4"/>
+        <text class="fc-label" x="308" y="239" text-anchor="middle">end</text>
+      </svg>
+    </div>
+  </div>
+</section>
 
-<!-- UI helpers -->
-<script src="student/js/js__ui__dom.js"></script>
-<script src="student/js/js__ui__modal.js"></script>
-<script src="student/js/js__ui__settings.js"></script>
-<script src="student/js/js__ui__a11y.js"></script>
-<script src="student/js/js__ui__confetti.js"></script>
+<!-- ============ WHY ============ -->
+<section class="section alt-bg" id="why">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">Why it works</span>
+      <h2>Built around how students actually learn to code.</h2>
+      <p class="sub">Reading code, predicting its behaviour and fixing it are skills in their own right — and they come <em>before</em> writing from scratch. PyQuiz makes that progression the default.</p>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <div class="ic ic-navy">◷</div>
+        <h3>Scaffolding that fades</h3>
+        <p>Activities move from Predict → Investigate → Modify → Make, so support is removed gradually as confidence grows — not all at once on a blank page.</p>
+      </div>
+      <div class="card">
+        <div class="ic ic-amber">⚙</div>
+        <h3>Thinking, not just typing</h3>
+        <p>Trace tables, flowcharts and "spot the bug" build a precise mental model of how code runs — the part students most often skip.</p>
+      </div>
+      <div class="card">
+        <div class="ic ic-teal">↻</div>
+        <h3>A week's set in under an hour</h3>
+        <p>Describe what you want to an AI, import the draft, fine-tune in the tool. Creation and editing together — not an afternoon.</p>
+      </div>
+      <div class="card">
+        <div class="ic ic-plum">◆</div>
+        <h3>One tool, KS3 to KS5</h3>
+        <p>The same activity types stretch from first loops in Year 7 to exam-style reasoning in the sixth form. Students grow into it.</p>
+      </div>
+      <div class="card">
+        <div class="ic ic-navy">⊞</div>
+        <h3>Accessible by design</h3>
+        <p>Dyslexia-friendly type, high-contrast and dark themes, adjustable text size, and keyboard-friendly interactions — on by default.</p>
+      </div>
+      <div class="card">
+        <div class="ic ic-amber">↯</div>
+        <h3>Zero friction to start</h3>
+        <p>Today it's a static site — no setup, no logins, nothing to install, and progress stays on the student's device. Host it free on GitHub Pages and you're running in minutes. Richer options are on the way.</p>
+      </div>
+    </div>
+  </div>
+</section>
 
-<!-- Renderers registry + per-type -->
-<script src="student/js/js__renderers__index.js"></script>
-<script src="student/js/js__renderers__io_panel.js"></script>
-<script src="student/js/js__renderers__parsons.js"></script>
-<script src="student/js/js__renderers__cloze.js"></script>
-<script src="student/js/js__renderers__trace_table.js"></script>
-<script src="student/js/js__renderers__spot_the_bug.js"></script>
-<script src="student/js/js__renderers__predict_output.js"></script>
-<script src="student/js/js__renderers__starter_challenge.js"></script>
-<script src="student/js/js__renderers__testing.js"></script>
-<script src="student/js/js__renderers__flowchart.js"></script>
+<!-- ============ KEY STAGES ============ -->
+<section class="section" id="stages">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">One ladder, five years</span>
+      <h2>From first loops to exam-ready reasoning.</h2>
+      <p class="sub">The activity types don't change — the demand does. Later packs make strong preparation for the problem-solving and program-comprehension paper at GCSE and A-Level.</p>
+    </div>
+    <div class="ks-band">
+      <div class="ks">
+        <div class="yr">Year 7</div>
+        <h4>First steps</h4>
+        <p>Sequence, variables and simple output. Predicting before running.</p>
+      </div>
+      <div class="ks">
+        <div class="yr">Year 8</div>
+        <h4>Selection &amp; loops</h4>
+        <p>Conditions, counting and condition-controlled loops. Tracing values.</p>
+      </div>
+      <div class="ks">
+        <div class="yr">Year 9</div>
+        <h4>Decomposition</h4>
+        <p>Nested loops, functions and breaking problems into parts.</p>
+      </div>
+      <div class="ks paper2">
+        <span class="badge">Paper 2 prep</span>
+        <div class="yr">KS4 · GCSE</div>
+        <h4>Comprehension</h4>
+        <p>Trace, debug and refine — the reading-and-reasoning skills the written paper rewards.</p>
+      </div>
+      <div class="ks paper2">
+        <span class="badge">Paper 2 prep</span>
+        <div class="yr">KS5 · A-Level</div>
+        <h4>Algorithms</h4>
+        <p>Test design, boundary cases and complex traces for the problem-solving paper.</p>
+      </div>
+    </div>
+    <p class="sub" style="margin-top:18px;font-size:0.95rem;">Exam-board neutral — the skills map to the written problem-solving paper across boards.</p>
+  </div>
+</section>
 
-<!-- App -->
-<script src="student/js/js__apps__student.js"></script>
+<!-- ============ WORKFLOW ============ -->
+<section class="section alt-bg" id="workflow">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">The suggested workflow</span>
+      <h2>Draft with AI. Polish in the tool. Done.</h2>
+      <p class="sub">A rough guide, not a rulebook. Tap a step for detail.</p>
+    </div>
+    <div class="flow-steps" id="flowSteps">
+      <button class="flow-step" data-step="0" aria-expanded="false">
+        <div class="n">Step 01</div><h4>Describe it</h4>
+        <p class="tldr">Tell the AI the year, topic, length and shape.</p>
+      </button>
+      <button class="flow-step" data-step="1" aria-expanded="false">
+        <div class="n">Step 02</div><h4>Generate JSON</h4>
+        <p class="tldr">Paste our prompt; the AI returns a pack.</p>
+      </button>
+      <button class="flow-step" data-step="2" aria-expanded="false">
+        <div class="n">Step 03</div><h4>Import</h4>
+        <p class="tldr">Drop the JSON into the authoring tool.</p>
+      </button>
+      <button class="flow-step" data-step="3" aria-expanded="false">
+        <div class="n">Step 04</div><h4>Fine-tune</h4>
+        <p class="tldr">Tweak wording, order and difficulty.</p>
+      </button>
+      <button class="flow-step" data-step="4" aria-expanded="false">
+        <div class="n">Step 05</div><h4>Share</h4>
+        <p class="tldr">Export and give students the link.</p>
+      </button>
+    </div>
+    <div class="flow-detail" id="flowDetail" role="region" aria-live="polite"></div>
+    <div style="margin-top:28px; display:flex; gap:14px; flex-wrap:wrap;">
+      <a class="btn btn-primary" href="docs.html">📖 Read the documentation</a>
+      <a class="btn btn-ghost" href="docs.html#prompt">Get the AI prompt</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ACTIVITY TYPES ============ -->
+<section class="section" id="types">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">Eight activity types</span>
+      <h2>Enough variety to drill a skill from every angle.</h2>
+    </div>
+    <div class="types">
+      <div class="type-chip"><div class="t">Predict output</div><div class="d">Read code and predict what it prints — or pick the code that produces a given output.</div></div>
+      <div class="type-chip"><div class="t">Parsons</div><div class="d">Reorder shuffled lines into a working program.</div></div>
+      <div class="type-chip"><div class="t">Cloze</div><div class="d">Fill the gaps — text, drop-down or word bank.</div></div>
+      <div class="type-chip"><div class="t">Trace table</div><div class="d">Step through code, recording each variable.</div></div>
+      <div class="type-chip"><div class="t">Flowchart</div><div class="d">Complete the missing parts of a flowchart.</div></div>
+      <div class="type-chip"><div class="t">Spot the bug</div><div class="d">Find the broken line and fix it.</div></div>
+      <div class="type-chip"><div class="t">Modify</div><div class="d">Change working code to meet a new spec.</div></div>
+      <div class="type-chip"><div class="t">Testing</div><div class="d">Design test data: normal, boundary, erroneous.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CTA ============ -->
+<section class="section alt-bg cta-band">
+  <div class="wrap">
+    <h2>See it from both sides.</h2>
+    <p class="sub">Try a ready-made pack as a student, or open the authoring tool and build one.</p>
+    <div class="cta-pair">
+      <a class="btn btn-primary btn-lg" href="student/index.html">▶ Try as a student</a>
+      <a class="btn btn-amber btn-lg" href="teacher/index.html">✎ Try as a teacher</a>
+    </div>
+  </div>
+</section>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <span>PyQuiz — a space to think algorithmically. Static, open and free to host.</span>
+    <span><a href="docs.html" style="color:var(--navy);text-decoration:none;font-weight:700;">Documentation</a></span>
+  </div>
+</footer>
+
+<script>
+  // Workflow step detail panel.
+  var DETAIL = [
+    { h: "Describe what you want", b: "In plain English, tell the AI the year group, the topic, how long the lesson is, and how you'd like it chunked. For example: <code>Create a 30-minute activity on selection for Year 8 with 5 final challenges. Chunk it into easy-to-follow sections with a logical progression.</code> The more specific the better — length, number of challenges, and any misconceptions to target." },
+    { h: "Generate the pack JSON", b: "Paste the PyQuiz system prompt (from the documentation) first, then your request. The prompt teaches the AI every activity type, the exact JSON shape, and the pedagogy — fading scaffolding, sensible difficulty progression, sectioning — so it returns a complete, importable pack rather than a vague outline. Works with ChatGPT, Claude, Gemini or Copilot." },
+    { h: "Import the draft", b: "Open the authoring tool, choose <code>Import</code>, and drop in the JSON (or a <code>.pyquiz</code> file). Everything appears as editable activities grouped into sections. If the AI made a structural mistake, the tool flags it for you automatically." },
+    { h: "Fine-tune to your class", b: "This is where your expertise lands. Reorder activities by dragging, adjust difficulty, sharpen the wording of a hint, swap a variable name to match your examples, or delete anything that doesn't fit. Preview each activity exactly as students will see it." },
+    { h: "Share with students", b: "Export the pack — primarily as a <code>.pyquiz</code> file — and add it to your packs folder, or just hand students the file. They open the student page, pick the pack, and start. Progress saves on their own device." }
+  ];
+  var steps = document.getElementById("flowSteps");
+  var detail = document.getElementById("flowDetail");
+  var current = -1;
+  steps.addEventListener("click", function (ev) {
+    var btn = ev.target.closest(".flow-step");
+    if (!btn) return;
+    var i = parseInt(btn.getAttribute("data-step"), 10);
+    var all = steps.querySelectorAll(".flow-step");
+    if (current === i) {
+      current = -1;
+      detail.classList.remove("open");
+      all.forEach(function (b) { b.setAttribute("aria-expanded", "false"); });
+      return;
+    }
+    current = i;
+    all.forEach(function (b) { b.setAttribute("aria-expanded", b === btn ? "true" : "false"); });
+    detail.innerHTML = "<h4>" + DETAIL[i].h + "</h4><p>" + DETAIL[i].b + "</p>";
+    detail.classList.remove("open");
+    void detail.offsetWidth;            // restart the animation
+    detail.classList.add("open");
+  });
+  // Open the first step by default so the section never looks empty.
+  steps.querySelector('.flow-step[data-step="0"]').click();
+</script>
 </body>
 </html>

@@ -29,14 +29,38 @@
   const PyQuiz = (window.PyQuiz = window.PyQuiz || {});
   const _types = {};
 
+  /* Version-aware registry. Each type can register multiple renderer
+     versions: register(type, fn, version). An activity carries
+     `renderer_version` (an integer, default 1); render() picks the exact
+     version if present, else the highest registered version <= requested,
+     else the highest available. */
+  function pickVersion(type, want) {
+    const byV = _types[type];
+    if (!byV) return null;
+    const versions = Object.keys(byV).map(Number).sort(function (a, b) { return a - b; });
+    if (!versions.length) return null;
+    if (byV[want]) return byV[want];
+    let best = null;
+    for (let i = 0; i < versions.length; i++) {
+      if (versions[i] <= want) best = versions[i];
+    }
+    if (best == null) best = versions[0];
+    return byV[best];
+  }
   const Renderers = {
-    register: function (type, renderFn) {
-      _types[type] = renderFn;
+    register: function (type, renderFn, version) {
+      const v = (version == null) ? 1 : version;
+      if (!_types[type] || typeof _types[type] !== "object") _types[type] = {};
+      _types[type][v] = renderFn;
     },
-    has: function (type) { return typeof _types[type] === "function"; },
+    has: function (type) { return !!_types[type] && Object.keys(_types[type]).length > 0; },
+    versions: function (type) {
+      return _types[type] ? Object.keys(_types[type]).map(Number).sort(function (a, b) { return a - b; }) : [];
+    },
     render: function (activity, host, callbacks) {
       host.innerHTML = "";
-      const fn = _types[activity.type];
+      const want = (activity && activity.renderer_version) ? (parseInt(activity.renderer_version, 10) || 1) : 1;
+      const fn = pickVersion(activity.type, want);
       if (typeof fn !== "function") {
         host.textContent = "No renderer registered for type " + activity.type;
         return null;

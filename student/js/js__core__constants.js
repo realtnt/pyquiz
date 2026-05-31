@@ -31,6 +31,15 @@
       "testing",
       "flowchart"
     ],
+    /* The renderer version each activity type is CURRENTLY authored against.
+       Bump a type's number by one whenever its renderer changes in a way that
+       could affect how older packs render, and register the new renderer with
+       that version. New/imported activities are stamped with these numbers;
+       the registry falls back to the nearest older renderer for old packs. */
+    CURRENT_RENDERER_VERSION: {
+      parsons: 1, cloze: 1, trace_table: 1, spot_the_bug: 1, modify: 1,
+      predict_output: 1, starter_challenge: 1, testing: 1, flowchart: 1
+    },
     /* Default colour-coding for each activity type. Teachers can override
        per-activity via the optional `colour` field. All chosen to meet
        WCAG AA against the off-white pane background as a small pill or

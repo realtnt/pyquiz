@@ -31,6 +31,10 @@
       "testing",
       "flowchart"
     ],
+    CURRENT_RENDERER_VERSION: {
+      parsons: 1, cloze: 1, trace_table: 1, spot_the_bug: 1, modify: 1,
+      predict_output: 1, starter_challenge: 1, testing: 1, flowchart: 1
+    },
     /* Default colour-coding for each activity type. Teachers can override
        per-activity via the optional `colour` field. All chosen to meet
        WCAG AA against the off-white pane background as a small pill or

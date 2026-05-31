@@ -50,7 +50,8 @@
 
   /* ---- Refresh ---- */
   function refresh() {
-    document.getElementById("pack-title").textContent = pack.title || "Untitled pack";
+    const t = document.getElementById("pane-pack-title");
+    if (t) t.textContent = pack.title || "Untitled pack";
     renderTaskList();
     renderEditor();
     renderSidePanel();
@@ -96,7 +97,7 @@
     if (currentEditId === "__meta__") metaLi.classList.add("current");
     const metaBtn = DOM.el("button", { type: "button", onclick: () => { currentEditId = "__meta__"; refresh(); } });
     metaBtn.appendChild(DOM.el("span", { class: "status not_started" }, "≡"));
-    metaBtn.appendChild(DOM.el("span", { class: "task-title", style: "font-weight:600" }, "Pack details"));
+    metaBtn.appendChild(DOM.el("span", { class: "task-title", style: "font-weight:600" }, "Pack settings"));
     metaLi.appendChild(metaBtn);
     ol.appendChild(metaLi);
 
@@ -425,9 +426,9 @@
      Editing a property updates the live preview in place. */
   function renderEditor() {
     const main = document.getElementById("main-region");
-    const props = document.getElementById("side-panel");
+    const props = document.getElementById("side-panel-body") || document.getElementById("side-panel");
     main.innerHTML = "";
-    // Preserve the side-panel resize handle while clearing its content.
+    // Clear only the body — the rail, head and resize handle live outside it.
     const handle = props ? props.querySelector(".pane-resize") : null;
     if (props) { props.innerHTML = ""; if (handle) props.appendChild(handle); }
 
@@ -569,7 +570,7 @@
     if (_editPropTimer) clearTimeout(_editPropTimer);
     _editPropTimer = setTimeout(() => {
       _editPropTimer = null;
-      const props = document.getElementById("side-panel");
+      const props = document.getElementById("side-panel-body") || document.getElementById("side-panel");
       if (!props) return;
       const handle = props.querySelector(".pane-resize");
       props.innerHTML = ""; if (handle) props.appendChild(handle);
@@ -1325,8 +1326,8 @@
         p.shared_pool = p.shared_pool || { items: [], has_distractors: true, single_use: true };
         DOM.chipsField(bw, "Word bank", p.shared_pool.items || [],
           v => { p.shared_pool.items = v; onChange(); },
-          { placeholder: "Add a bank word\u2026", caseSensitive: true, splitter: splitBankValues,
-            hint: "Enter or comma to add. For a word containing a comma, wrap it like {{a,b}}. Add extra words as distractors." });
+          { placeholder: "Add a bank word\u2026", caseSensitive: true, splitter: splitBankValues, allowDuplicates: true,
+            hint: "Enter or comma to add. For a word containing a comma, wrap it like {{a,b}}. Duplicates are allowed (e.g. two \u201ci\u201ds). Add extra words as distractors." });
         belowHost.appendChild(bw);
         belowHost.appendChild(DOM.el("p", { class: "le-note" },
           (p.blanks.length || 0) + " blank(s) detected. Make sure every answer above also appears in the bank."));
@@ -2210,64 +2211,107 @@
         ul.appendChild(li);
       });
       body.appendChild(ul);
-    } else {
-      const warns = Validator.warningsIn(issues);
-      if (warns.length) body.appendChild(DOM.el("p", { class: "banner" }, warns.length + " warning(s) — export allowed but consider reviewing."));
-      const sec = DOM.el("div", { style: "display:flex;flex-direction:column;gap:10px" });
-
-      const t1 = DOM.el("div");
-      t1.appendChild(DOM.el("h3", null, "Teacher JSON"));
-      t1.appendChild(DOM.el("p", { style: "color:var(--muted);font-size:0.9em" }, "Includes everything: teacher notes, metadata, answers. Use this as your editable source of truth."));
-      t1.appendChild(DOM.button("Download .pyquiz.json", () => {
-        DOM.download(pack.id + ".pyquiz.json", JSON.stringify(pack, null, 2), "application/json");
-      }, "primary"));
-      sec.appendChild(t1);
-
-      const t2 = DOM.el("div");
-      t2.appendChild(DOM.el("h3", null, "Student pack (encoded)"));
-      t2.appendChild(DOM.el("p", { style: "color:var(--muted);font-size:0.9em" }, "Compact and obfuscated. Teacher notes and metadata are stripped, but answers remain (they are needed for offline marking)."));
-      const warn = DOM.el("p", { class: "banner", style: "border-radius:var(--radius);margin:8px 0" }, S.encodedPackWarning);
-      t2.appendChild(warn);
-      t2.appendChild(DOM.button("Download .pyquiz", async () => {
-        const encoded = await Codec.encode(pack);
-        DOM.download(pack.id + ".pyquiz", encoded, "text/plain");
-      }, "primary"));
-      const copyBtn = DOM.button("Copy encoded string", async () => {
-        const encoded = await Codec.encode(pack);
-        try {
-          await navigator.clipboard.writeText(encoded);
-          copyBtn.textContent = "Copied";
-          setTimeout(() => copyBtn.textContent = "Copy encoded string", 1500);
-        } catch { alert("Copy failed — please save the file instead."); }
-      });
-      t2.appendChild(copyBtn);
-      sec.appendChild(t2);
-
-      body.appendChild(sec);
+      Modal.open({ title: "Export", body: body });
+      return;
     }
+
+    const warns = Validator.warningsIn(issues);
+    if (warns.length) body.appendChild(DOM.el("p", { class: "banner" }, warns.length + " warning(s) — export is allowed, but you may want to review them first."));
+
+    // ---- Primary: the .pyquiz file ----
+    const primary = DOM.el("div", { class: "export-primary" });
+    primary.appendChild(DOM.el("h3", null, "Download pack (.pyquiz)"));
+    primary.appendChild(DOM.el("p", { class: "export-note" },
+      "The pack file students load. Compact and self-contained. This is the file to add to your packs folder."));
+    primary.appendChild(DOM.button("⬇  Download .pyquiz", async () => {
+      const encoded = await Codec.encode(pack);
+      DOM.download(pack.id + ".pyquiz", encoded, "text/plain");
+    }, "primary big"));
+    body.appendChild(primary);
+
+    // ---- Add to your site (manifest snippet + how-to) ----
+    const repo = DOM.el("details", { class: "export-repo" });
+    repo.appendChild(DOM.el("summary", null, "Add this pack to your PyQuiz site"));
+    const fileName = pack.id + ".pyquiz";
+    const lvl = guessLevel(pack);
+    const entry = {
+      id: pack.id,
+      title: pack.title || pack.id,
+      level: lvl,
+      description: (pack.description || "").slice(0, 140),
+      activities: (pack.activities || []).length,
+      sections: (pack.sections || []).length,
+      file: fileName
+    };
+    const snippet = JSON.stringify(entry, null, 2);
+    const ol = DOM.el("ol", { class: "export-steps" });
+    const li1 = DOM.el("li"); li1.appendChild(DOM.text("Download the ")); li1.appendChild(DOM.el("code", null, ".pyquiz")); li1.appendChild(DOM.text(" file above and drop it into your repository's ")); li1.appendChild(DOM.el("code", null, "packs/")); li1.appendChild(DOM.text(" folder."));
+    const li2 = DOM.el("li"); li2.appendChild(DOM.text("Open ")); li2.appendChild(DOM.el("code", null, "packs/index.json")); li2.appendChild(DOM.text(" and add the entry below to the ")); li2.appendChild(DOM.el("code", null, '"packs"')); li2.appendChild(DOM.text(" list (mind the comma between entries)."));
+    const li3 = DOM.el("li", null, "Commit and push. The student chooser reads the manifest, so the pack appears automatically.");
+    ol.appendChild(li1); ol.appendChild(li2); ol.appendChild(li3);
+    repo.appendChild(ol);
+    const snipWrap = DOM.el("div", { class: "export-snippet" });
+    const pre = DOM.el("pre"); pre.appendChild(DOM.el("code", null, snippet));
+    snipWrap.appendChild(pre);
+    const copySnip = DOM.button("Copy manifest entry", async () => {
+      try { await navigator.clipboard.writeText(snippet); copySnip.textContent = "Copied"; setTimeout(() => copySnip.textContent = "Copy manifest entry", 1500); }
+      catch { alert("Copy failed — select the text and copy it manually."); }
+    });
+    snipWrap.appendChild(copySnip);
+    repo.appendChild(snipWrap);
+    repo.appendChild(DOM.el("p", { class: "export-note" },
+      "Tip: adjust the level (KS3 / KS4 / KS5) and description to suit. These only affect how the pack is listed in the chooser."));
+    body.appendChild(repo);
+
+    // ---- Secondary: editable JSON (less prominent) ----
+    const sec = DOM.el("details", { class: "export-json" });
+    sec.appendChild(DOM.el("summary", null, "Other formats"));
+    sec.appendChild(DOM.el("p", { class: "export-note" },
+      "Export the full editable JSON — your source of truth, including any teacher notes and metadata. Re-import it any time to keep editing."));
+    sec.appendChild(DOM.button("Download .json", () => {
+      DOM.download(pack.id + ".json", JSON.stringify(pack, null, 2), "application/json");
+    }, "ghost"));
+    body.appendChild(sec);
+
     Modal.open({ title: "Export", body: body });
+  }
+
+  /* Best-guess key stage for the manifest entry, from the pack's audience
+     or activity difficulty. The teacher can edit it in the snippet. */
+  function guessLevel(p) {
+    const a = (p.audience || "").toLowerCase();
+    if (a.indexOf("ks5") >= 0 || a.indexOf("a-level") >= 0 || a.indexOf("alevel") >= 0) return "KS5";
+    if (a.indexOf("ks4") >= 0 || a.indexOf("gcse") >= 0) return "KS4";
+    if (a.indexOf("ks3") >= 0) return "KS3";
+    const diffs = (p.activities || []).map(x => x.difficulty || 1);
+    const avg = diffs.length ? diffs.reduce((s, x) => s + x, 0) / diffs.length : 1;
+    if (avg >= 4) return "KS5";
+    if (avg >= 2.6) return "KS4";
+    return "KS3";
   }
 
   /* ---- Top bar ---- */
   function bindTopBar() {
-    document.getElementById("burger").addEventListener("click", () => {
-      const l = document.getElementById("layout");
-      if (window.innerWidth <= 1280) l.classList.toggle("tl-open");
-      else l.classList.toggle("tl-collapsed");
-    });
-    document.getElementById("burger-right").addEventListener("click", () => {
-      const l = document.getElementById("layout");
-      if (window.innerWidth <= 1280) l.classList.toggle("sp-open");
-      else l.classList.toggle("sp-collapsed");
-    });
+    // Pane collapse: each pane has a collapse button (in its head) and a rail
+    // (shown when collapsed) to reopen it. Mirrors the flowchart side panel.
+    const layout = () => document.getElementById("layout");
+    function setTL(collapsed) { layout().classList.toggle("tl-collapsed", collapsed); }
+    function setSP(collapsed) { layout().classList.toggle("sp-collapsed", collapsed); }
+    const tlc = document.getElementById("tl-collapse");
+    const tlr = document.getElementById("tl-rail");
+    const spc = document.getElementById("sp-collapse");
+    const spr = document.getElementById("sp-rail");
+    if (tlc) tlc.addEventListener("click", () => setTL(true));
+    if (tlr) tlr.addEventListener("click", () => setTL(false));
+    if (spc) spc.addEventListener("click", () => setSP(true));
+    if (spr) spr.addEventListener("click", () => setSP(false));
     document.getElementById("new-btn").addEventListener("click", () => {
-      if (!confirm("Start a new blank pack? Current pack will remain in drafts.")) return;
+      if (!confirm("Start a new blank pack? Anything unexported in the current pack will be lost.")) return;
       pack = Pack.blank();
       currentEditId = "__meta__";
       saveDraft(true);
       refresh();
     });
-    document.getElementById("open-btn").addEventListener("click", openDraftsDialog);
     document.getElementById("import-btn").addEventListener("click", () => document.getElementById("import-file").click());
     document.getElementById("import-file").addEventListener("change", async (e) => {
       const f = e.target.files[0];
@@ -2288,7 +2332,6 @@
       } catch (err) { alert("Import failed: " + err.message); }
       e.target.value = "";
     });
-    document.getElementById("validate-btn").addEventListener("click", () => renderSidePanel());
     document.getElementById("export-btn").addEventListener("click", openExportDialog);
     document.getElementById("size-up").addEventListener("click", () => Settings.bumpSize(1));
     document.getElementById("size-down").addEventListener("click", () => Settings.bumpSize(-1));

@@ -110,13 +110,99 @@
     }, "primary");
     cta.classList.add("big", "welcome-btn-load");
     const createCta = DOM.button("✎  Create your own", () => {
-      window.open("teacher.html", "_blank");
+      window.open("../teacher/index.html", "_blank");
     }, "primary");
     createCta.classList.add("big", "welcome-btn-create");
     heroAction.appendChild(cta);
     heroAction.appendChild(createCta);
     hero.appendChild(heroAction);
     wrap.appendChild(hero);
+
+    /* Pack chooser — fetched from packs/index.json (the manifest). Static
+       sites have no directory listing, so the manifest is the source of
+       truth. Grouped by key stage. Falls back silently if absent (e.g. when
+       the app is opened as a bare file with no packs folder alongside). */
+    const chooser = DOM.el("section", { class: "welcome-chooser" });
+    chooser.appendChild(DOM.el("h2", { class: "welcome-chooser-h" }, "Choose an activity pack"));
+    const chooserBody = DOM.el("div", { class: "welcome-chooser-body" });
+    chooserBody.appendChild(DOM.el("p", { class: "welcome-chooser-loading" }, "Loading packs\u2026"));
+    chooser.appendChild(chooserBody);
+    wrap.appendChild(chooser);
+
+    (function loadManifest() {
+      // Resolve packs/ relative to the app folder (…/student/ → …/packs/).
+      if (typeof fetch !== "function") { showChooser(null); return; }
+      const candidates = ["../packs/index.json", "packs/index.json"];
+      let idx = 0;
+      function tryNext() {
+        if (idx >= candidates.length) { showChooser(null); return; }
+        const url = candidates[idx++];
+        fetch(url, { cache: "no-cache" })
+          .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+          .then(m => showChooser(m, url))
+          .catch(() => tryNext());
+      }
+      tryNext();
+    })();
+
+    function showChooser(manifest, url) {
+      chooserBody.innerHTML = "";
+      const packs = manifest && Array.isArray(manifest.packs) ? manifest.packs : [];
+      if (!packs.length) {
+        // No manifest reachable — hide the chooser heading and lean on the
+        // built-in cards + Load button below.
+        chooser.style.display = "none";
+        return;
+      }
+      const base = url ? url.replace(/index\.json$/, "") : "../packs/";
+      const groups = {};
+      packs.forEach(p => { (groups[p.level || "Other"] = groups[p.level || "Other"] || []).push(p); });
+      const order = ["KS3", "KS4", "KS5", "Other"];
+      order.filter(k => groups[k]).forEach(level => {
+        const g = DOM.el("div", { class: "welcome-chooser-group" });
+        g.appendChild(DOM.el("div", { class: "welcome-chooser-level" }, level));
+        const grid = DOM.el("div", { class: "welcome-builtin-grid" });
+        groups[level].forEach(p => {
+          const card = DOM.el("button", { type: "button", class: "welcome-builtin-card", "aria-label": "Load pack: " + p.title });
+          card.appendChild(DOM.el("div", { class: "welcome-builtin-card-title" }, p.title));
+          card.appendChild(DOM.el("div", { class: "welcome-builtin-card-desc" }, p.description || ""));
+          const meta = [];
+          if (p.activities) meta.push(p.activities + " activities");
+          if (p.sections) meta.push(p.sections + " sections");
+          if (meta.length) card.appendChild(DOM.el("div", { class: "welcome-chooser-meta" }, meta.join(" \u00b7 ")));
+          card.addEventListener("click", () => loadPackFromUrl(base + p.file, card));
+          grid.appendChild(card);
+        });
+        g.appendChild(grid);
+        chooserBody.appendChild(g);
+      });
+    }
+
+    function loadPackFromUrl(url, card) {
+      if (card) { card.disabled = true; card.classList.add("is-loading"); }
+      fetch(url, { cache: "no-cache" })
+        .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.text(); })
+        .then(async text => {
+          // Packs ship as .pyquiz (encoded) or plain .json.
+          let pack = null;
+          const trimmed = (text || "").trim();
+          if (trimmed.indexOf("v1.") === 0 && PyQuiz.Codec && PyQuiz.Codec.decode) {
+            pack = await PyQuiz.Codec.decode(trimmed);
+          } else {
+            pack = JSON.parse(trimmed);
+          }
+          if (PyQuiz.Pack && PyQuiz.Pack.ingestPack) {
+            const r = PyQuiz.Pack.ingestPack(pack);
+            if (r.ok) pack = r.pack; else { throw new Error("Pack failed validation."); }
+          }
+          loadPack(pack);
+        })
+        .catch(err => {
+          if (card) { card.disabled = false; card.classList.remove("is-loading"); }
+          console.error("Could not load pack:", url, err);
+          alert("Sorry — that pack could not be loaded.");
+        });
+    }
 
     /* Built-in packs — bundled with the app for testing and quick demos.
        This section is intentionally easy to hide later by emptying
@@ -1388,7 +1474,7 @@
   }
 
   function renderSidePanel(act) {
-    const sp = document.getElementById("side-panel");
+    const sp = document.getElementById("side-panel-body") || document.getElementById("side-panel");
     // Preserve the resize handle (added once by setupPaneResize) while
     // clearing the rest of the panel's content.
     const handle = sp.querySelector(".pane-resize");
@@ -1588,16 +1674,15 @@
 
   /* ---- Top bar ---- */
   function bindTopBar() {
-    document.getElementById("burger").addEventListener("click", () => {
-      const l = document.getElementById("layout");
-      if (window.innerWidth <= 1280) l.classList.toggle("tl-open");
-      else l.classList.toggle("tl-collapsed");
-    });
-    document.getElementById("burger-right").addEventListener("click", () => {
-      const l = document.getElementById("layout");
-      if (window.innerWidth <= 1280) l.classList.toggle("sp-open");
-      else l.classList.toggle("sp-collapsed");
-    });
+    const layout = () => document.getElementById("layout");
+    const tlc = document.getElementById("tl-collapse");
+    const tlr = document.getElementById("tl-rail");
+    const spc = document.getElementById("sp-collapse");
+    const spr = document.getElementById("sp-rail");
+    if (tlc) tlc.addEventListener("click", () => layout().classList.add("tl-collapsed"));
+    if (tlr) tlr.addEventListener("click", () => layout().classList.remove("tl-collapsed"));
+    if (spc) spc.addEventListener("click", () => layout().classList.add("sp-collapsed"));
+    if (spr) spr.addEventListener("click", () => layout().classList.remove("sp-collapsed"));
     document.getElementById("size-up").addEventListener("click", () => Settings.bumpSize(1));
     document.getElementById("size-down").addEventListener("click", () => Settings.bumpSize(-1));
     document.getElementById("theme-btn").addEventListener("click", () => Settings.cycleTheme());

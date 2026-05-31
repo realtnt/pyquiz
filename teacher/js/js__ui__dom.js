@@ -188,10 +188,16 @@
     let items = (values || []).map(s => String(s).trim()).filter(Boolean);
 
     function commit() {
-      // De-dupe preserving order (case-insensitively unless caseSensitive).
-      const seen = {}; const out = [];
-      items.forEach(v => { const k = caseSensitive ? v : v.toLowerCase(); if (v && !seen[k]) { seen[k] = 1; out.push(v); } });
-      items = out;
+      if (opts.allowDuplicates) {
+        // Word bank can legitimately need the same word twice (e.g. "i" used
+        // in two blanks). Only drop empties, keep duplicates and order.
+        items = items.filter(Boolean);
+      } else {
+        // De-dupe preserving order (case-insensitively unless caseSensitive).
+        const seen = {}; const out = [];
+        items.forEach(v => { const k = caseSensitive ? v : v.toLowerCase(); if (v && !seen[k]) { seen[k] = 1; out.push(v); } });
+        items = out;
+      }
       onChange(items.slice());
     }
     function rebuild(focusInput) {

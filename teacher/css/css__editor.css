@@ -1002,6 +1002,19 @@ textarea.json-edit {
   resize: vertical;
 }
 
+/* Export dialog */
+.btn.big { font-size: 1.05em; padding: 12px 22px; }
+.export-primary { padding: 4px 0 8px; }
+.export-primary h3 { margin: 0 0 4px; font-size: 1.15em; }
+.export-note { color: var(--muted); font-size: 0.9em; margin: 4px 0 12px; }
+.export-repo, .export-json { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; }
+.export-repo summary, .export-json summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+.export-steps { margin: 10px 0; padding-left: 22px; }
+.export-steps li { margin-bottom: 6px; }
+.export-steps code, .export-note code { font-family: var(--font-mono); background: var(--code-bg); padding: 1px 5px; border-radius: 4px; font-size: 0.88em; }
+.export-snippet { position: relative; margin: 8px 0; }
+.export-snippet pre { background: var(--code-bg); color: var(--code-fg); padding: 12px; border-radius: var(--radius); overflow: auto; font-family: var(--font-mono); font-size: 0.85em; margin: 0 0 8px; }
+
 /* Draft cards (Open dialog) */
 .activity-card {
   background: var(--panel);

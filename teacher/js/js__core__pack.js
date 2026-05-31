@@ -185,9 +185,12 @@
   }
 
   function blankActivity(type) {
+    const rv = (PyQuiz.Constants && PyQuiz.Constants.CURRENT_RENDERER_VERSION
+                && PyQuiz.Constants.CURRENT_RENDERER_VERSION[type]) || 1;
     return {
       id: uid("act"),
       type: type,
+      renderer_version: rv,
       title: "New " + type.replace(/_/g, " "),
       instructions: "",
       context: null,
@@ -416,6 +419,15 @@
     return addActivity(pack, obj, Object.assign({ validate: true }, opts || {}));
   }
 
+  function stampRendererVersions(pack) {
+    if (!pack || !Array.isArray(pack.activities)) return pack;
+    const cur = (PyQuiz.Constants && PyQuiz.Constants.CURRENT_RENDERER_VERSION) || {};
+    pack.activities.forEach(function (a) {
+      if (a && a.renderer_version == null) a.renderer_version = cur[a.type] || 1;
+    });
+    return pack;
+  }
+
   function ingestPack(json) {
     let obj = json;
     if (typeof json === "string") {
@@ -423,6 +435,7 @@
       catch (e) { return { ok: false, issues: [{ level: "error", path: "", message: "Bad JSON: " + e.message }] }; }
     }
     if (!obj || typeof obj !== "object") return { ok: false, issues: [{ level: "error", path: "", message: "Pack must be an object." }] };
+    stampRendererVersions(obj);
     const issues = PyQuiz.Validator.pack(obj);
     if (issues.some(i => i.level === "error")) return { ok: false, issues: issues, pack: obj };
     return { ok: true, issues: issues, pack: obj };

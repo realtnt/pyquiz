@@ -1,0 +1,42 @@
+{
+  "schema": "pyquiz-packs@1",
+  "generated": "2026-05-30",
+  "packs": [
+    {
+      "id": "builtin-loops-intro",
+      "title": "Count-Controlled Loops",
+      "level": "KS3",
+      "description": "A gentle first look at for and while loops.",
+      "activities": 12,
+      "sections": 5,
+      "file": "loops-intro.pyquiz"
+    },
+    {
+      "id": "builtin-selection-intro",
+      "title": "Selection (if / else)",
+      "level": "KS3",
+      "description": "if / elif / else and boolean conditions.",
+      "activities": 12,
+      "sections": 5,
+      "file": "selection-intro.pyquiz"
+    },
+    {
+      "id": "builtin-variables-intro",
+      "title": "Variables & Assignment",
+      "level": "KS3",
+      "description": "First contact with variables, assignment and output.",
+      "activities": 12,
+      "sections": 5,
+      "file": "variables-intro.pyquiz"
+    },
+    {
+      "id": "builtin-loops-journey",
+      "title": "Loops: a complete journey",
+      "level": "KS4",
+      "description": "A complete journey: for, while and nested loops across four sections.",
+      "activities": 80,
+      "sections": 4,
+      "file": "loops-journey.pyquiz"
+    }
+  ]
+}

@@ -690,6 +690,26 @@
 
     const shapes = Array.isArray(fc.shapes) ? fc.shapes : [];
     const edges  = Array.isArray(fc.edges)  ? fc.edges  : [];
+    // Auto-arrange the routing on load UNLESS the flowchart was hand-edited.
+    // Precedence:
+    //   fc.auto_layout === false  -> never auto (explicitly hand-routed)
+    //   fc.auto_layout === true   -> always auto
+    //   unset                     -> auto ONLY if no edge carries stored routing
+    //                                (from_side/to_side/bend). This preserves
+    //                                charts hand-routed before the flag existed,
+    //                                while tidying fresh/unrouted ones.
+    let doAuto;
+    if (fc.auto_layout === false) doAuto = false;
+    else if (fc.auto_layout === true) doAuto = true;
+    else {
+      const hasStoredRouting = edges.some(function (e) {
+        return e && (e.from_side || e.to_side || e.bend);
+      });
+      doAuto = !hasStoredRouting;
+    }
+    if (doAuto && PyQuiz.Flowchart && PyQuiz.Flowchart.autoArrange) {
+      try { PyQuiz.Flowchart.autoArrange(shapes, edges); } catch (e) {}
+    }
     const shapesById = {};
     shapes.forEach(function (s) { shapesById[s.id] = s; });
 

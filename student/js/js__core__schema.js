@@ -92,6 +92,7 @@
       instructions:           { type: "string", required: true, description: "What the student must do." },
       context:                { type: "string", required: false, description: "Optional scenario shown above instructions." },
       difficulty:             { type: "number", required: false, default: 1, description: "1..5" },
+      renderer_version:       { type: "number", required: false, default: 1, description: "Which version of this activity type's renderer the activity was authored against. Defaults to 1. The app renders with that version if available, else the nearest older one, so old packs keep working when renderers change." },
       topics:                 { type: "array", required: false, items: { type: "string" } },
       spec_refs:              { type: "array", required: false, items: { type: "string" }, description: "Stripped on student export." },
       estimated_time_seconds: { type: "number", required: false, default: 60 },

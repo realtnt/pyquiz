@@ -167,6 +167,7 @@ body {
   flex: 1; min-width: 140px;
 }
 .topbar .meta { color: var(--muted); font-size: 0.92em; white-space: nowrap; }
+.topbar .save-status { flex: 1 1 auto; }
 .topbar .right { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 /* Visual gap separating the right burger from the rest of the action
    icons so it visually mirrors the left burger / pack-title boundary. */
@@ -179,6 +180,34 @@ body {
   color: var(--fg);
 }
 .burger:hover { background: var(--panel-2); }
+
+/* Home button — leftmost, mirrors the burger styling. */
+.home-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  text-decoration: none; color: var(--fg);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  min-width: 44px; min-height: 44px; padding: 8px 10px; background: transparent;
+}
+.home-btn:hover { background: var(--panel-2); }
+.home-btn svg { display: block; }
+
+/* Brand: the PyQuiz logo + wordmark, links to the marketing home page. */
+.brand-link {
+  display: inline-flex; align-items: center; gap: 9px; text-decoration: none;
+  color: var(--fg); padding: 4px 6px; border-radius: var(--radius);
+}
+.brand-link:hover { background: var(--panel-2); }
+.brand-mark { display: block; flex: 0 0 auto; }
+.brand-word { font-weight: 700; font-size: 1.15em; letter-spacing: -0.01em; }
+
+/* Toolbar: every button the same 38px square; A−/A+ slightly smaller text. */
+.toolbar .btn.icon {
+  width: 38px; height: 38px; min-width: 38px; min-height: 38px;
+  padding: 0; display: inline-flex; align-items: center; justify-content: center;
+}
+.toolbar .btn.icon svg { display: block; }
+.toolbar .btn.icon.icon-sm { font-size: 0.82em; }
+.toolbar-sep { width: 1px; height: 26px; background: var(--border); margin: 0 4px; display: inline-block; }
 
 /* Three-pane layout. .app is a flex column; this layout is flex:1
    so it takes the remaining vertical space below the topbar.
@@ -196,9 +225,9 @@ body {
   min-height: 0;
   transition: grid-template-columns 0.2s ease;
 }
-.layout.tl-collapsed { grid-template-columns: 0 1fr var(--sp-w, 380px); }
-.layout.sp-collapsed { grid-template-columns: var(--tl-w, 280px) 1fr 0; }
-.layout.tl-collapsed.sp-collapsed { grid-template-columns: 0 1fr 0; }
+.layout.tl-collapsed { grid-template-columns: 40px 1fr var(--sp-w, 380px); }
+.layout.sp-collapsed { grid-template-columns: var(--tl-w, 280px) 1fr 40px; }
+.layout.tl-collapsed.sp-collapsed { grid-template-columns: 40px 1fr 40px; }
 /* Welcome mode: no pack loaded yet, so the side panes have nothing in
    them — collapse both so the landing page gets the full canvas. We
    also zero out their borders so no 1-pixel hairline is left behind. */
@@ -215,15 +244,13 @@ body {
 .layout.resizing { transition: none; }
 
 @media (max-width: 1280px) {
-  /* Small screens: both side panes start CLOSED so the activity/preview gets
-     the full width. Each burger opens its own pane — left = tl-open (task
-     list), right = sp-open (properties) — mirroring each other. minmax caps
-     the open width so on the narrowest phones the pane takes what space it
-     can and the main pane shrinks gracefully instead of overflowing. */
-  .layout { grid-template-columns: 0 1fr 0; }
-  .layout.tl-open { grid-template-columns: minmax(0, var(--tl-w, 280px)) 1fr 0; }
-  .layout.sp-open { grid-template-columns: 0 1fr minmax(0, var(--sp-w, 380px)); }
-  .layout.tl-open.sp-open { grid-template-columns: minmax(0, var(--tl-w, 280px)) 1fr minmax(0, var(--sp-w, 380px)); }
+  /* Small screens use the same collapse model as desktop (rail + toggle).
+     minmax caps the expanded pane widths so a pane can't push the main area
+     off-screen. Collapsed panes show the 40px rail via the rules above. */
+  .layout { grid-template-columns: minmax(0, var(--tl-w, 280px)) 1fr minmax(0, var(--sp-w, 380px)); }
+  .layout.tl-collapsed { grid-template-columns: 40px 1fr minmax(0, var(--sp-w, 380px)); }
+  .layout.sp-collapsed { grid-template-columns: minmax(0, var(--tl-w, 280px)) 1fr 40px; }
+  .layout.tl-collapsed.sp-collapsed { grid-template-columns: 40px 1fr 40px; }
 }
 
 .task-list, .side-panel {
@@ -357,16 +384,59 @@ body {
 .tl-collapsed .task-list .pane-resize,
 .sp-collapsed .side-panel .pane-resize { display: none; }
 /* In welcome mode the handles must also be hidden — both panes are
-   width 0 so a sliver of handle would peek into the main area. */
+   collapsed so a sliver of handle would peek into the main area. */
 .welcome-mode .pane-resize { display: none; }
 
-/* Collapsed panes: hide overflow content, keep them as grid children so
-   the main pane stays in the middle column. The 0-width track does the
-   visual hiding; `display: none` would reflow grid items into wrong slots. */
-.tl-collapsed .task-list, .sp-collapsed .side-panel {
-  overflow: hidden;
-  border: 0;
+/* ---- Pane collapse / rail (mirrors the flowchart side panel) ---- */
+/* Each pane = a rail button (shown when collapsed) + an inner wrapper
+   (shown when open). The grid track width does the sizing; we just swap
+   which child is visible. */
+.task-list, .side-panel { position: relative; }
+.pane-rail { display: none; }
+.task-list .pane-inner, .side-panel .pane-inner {
+  display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0; overflow: hidden;
 }
+/* When collapsed: hide the inner, show the rail as a full-height vertical
+   strip with the rotated pane name and a reopen affordance. */
+.tl-collapsed .task-list .pane-inner,
+.sp-collapsed .side-panel .pane-inner { display: none; }
+.tl-collapsed .task-list .pane-rail,
+.sp-collapsed .side-panel .pane-rail {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  width: 100%; height: 100%; padding: 12px 0;
+  background: var(--pane); border: 0; cursor: pointer; color: var(--fg);
+  font: inherit;
+}
+.tl-collapsed .task-list .pane-rail:hover,
+.sp-collapsed .side-panel .pane-rail:hover { background: var(--panel-2); }
+.pane-rail-icon { font-size: 1.1em; color: var(--muted); }
+.pane-rail-label {
+  writing-mode: vertical-rl; transform: rotate(180deg);
+  font-size: 0.82em; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--muted); white-space: nowrap;
+}
+.tl-collapsed .task-list, .sp-collapsed .side-panel { overflow: hidden; }
+
+/* Pane head: title + collapse button on one row. */
+.pane-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 8px 8px 16px; border-bottom: 1px solid var(--border); flex: 0 0 auto;
+}
+.pane-pack-title {
+  flex: 1; min-width: 0; margin: 0; font-size: 1.02em; font-weight: 600; color: var(--fg);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pane-section-title {
+  flex: 1; min-width: 0; margin: 0; font-size: 0.85em; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--muted); font-weight: 600;
+}
+.pane-collapse-btn {
+  flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: transparent; color: var(--muted); cursor: pointer;
+}
+.pane-collapse-btn:hover { background: var(--panel-2); color: var(--fg); }
+.side-panel-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; }
 
 .task-list h2, .side-panel h2 {
   font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.05em;
@@ -407,6 +477,7 @@ body {
 .task-list li.task-row {
   display: flex;
   align-items: stretch;
+  min-width: 0;
   background: color-mix(in srgb, var(--activity-colour, var(--pane)) 8%, var(--pane));
   border-left: 5px solid var(--activity-colour, transparent);
   border-bottom: 1px solid var(--border);
@@ -424,9 +495,9 @@ body {
   .task-list li.task-row:hover { background: var(--panel-2); }
   .task-list li.task-row.current { background: var(--panel-2); }
 }
-.task-list li.task-row > .tl-handle { display: flex; align-items: center; }
+.task-list li.task-row > .tl-handle { display: flex; align-items: center; flex-shrink: 0; }
 .task-list li.task-row > button {
-  flex: 1 1 auto; width: auto;
+  flex: 1 1 auto; width: auto; min-width: 0;
   background: transparent;
   border: 0;
   border-left: 0;
@@ -435,6 +506,13 @@ body {
   -webkit-appearance: none;
   padding: 10px 16px 10px 4px;
   min-height: 44px;
+  /* Match the student task row: a flex container so .task-title (flex:1)
+     fills the space and the type pill is pinned to the right edge
+     regardless of title length. min-width:0 lets the button shrink below
+     its content width so the title truncates instead of pushing the pill
+     past the panel edge. */
+  display: flex; align-items: center; gap: 10px;
+  cursor: pointer; font: inherit; color: var(--fg); text-align: left;
 }
 .task-list li.task-row > button:hover { background: transparent; }
 .task-list li > button {
@@ -490,7 +568,8 @@ body {
   color: #FFFFFF;
   font-family: var(--font-mono);
   line-height: 1.5;
-  margin-left: 4px;
+  margin-left: auto;       /* pin to the right edge, independent of title length */
+  flex-shrink: 0;
 }
 [data-theme="hc"] .task-list .type-pill-abbrev {
   background: var(--bg) !important;

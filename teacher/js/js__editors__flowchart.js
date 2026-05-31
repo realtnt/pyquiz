@@ -175,6 +175,12 @@
     let connectFromSide = null;
     let lastOffset = { x: 0, y: 0 };   // centring translate applied to content
 
+    /* Once a human tunes the routing, the chart must render verbatim (the
+       renderer only auto-arranges charts whose auto_layout isn't false). */
+    function markHandRouted() {
+      p.flowchart.auto_layout = false;
+    }
+
     /* ---- helpers ---------------------------------------------------- */
     function uid(prefix) {
       let n;
@@ -596,12 +602,74 @@
     const canvasPane = hEl("div", { class: "fc-editor-canvas" });
     const svg = el("svg", { class: "fc-editor-svg" });
     canvasPane.appendChild(svg);
+    const resizeHandle = hEl("div", { class: "fc-editor-resize", title: "Drag to resize the panel" });
     const sidePane = hEl("div", { class: "fc-editor-side" });
+    // Collapse / expand toggle for the side panel.
+    const collapseBtn = hEl("button", { type: "button", class: "fc-side-collapse-btn", title: "Collapse panel" }, "\u00bb");
+    sidePane.appendChild(collapseBtn);
+    const sideBody = hEl("div", { class: "fc-side-body" });
+    sidePane.appendChild(sideBody);
     paneRow.appendChild(canvasPane);
+    paneRow.appendChild(resizeHandle);
     paneRow.appendChild(sidePane);
     wrap.appendChild(tools);
     wrap.appendChild(paneRow);
     host.appendChild(wrap);
+
+    /* ---- grab-to-pan: drag the empty canvas to scroll it (no scrollbars) ---- */
+    (function () {
+      let pan = null;
+      canvasPane.addEventListener("mousedown", function (ev) {
+        // Only pan when grabbing empty space — not a shape, port, edge or bend.
+        if (ev.button !== 0) return;
+        const onShape = ev.target.closest && ev.target.closest(".fc-shape-group, .fc-ed-port, .fc-edge-hit, .fc-bend-handle, .fc-endpoint-handle");
+        if (onShape) return;
+        if (connectFrom) return;
+        pan = { x: ev.clientX, y: ev.clientY, sl: canvasPane.scrollLeft, st: canvasPane.scrollTop };
+        canvasPane.classList.add("fc-panning");
+        ev.preventDefault();
+      });
+      window.addEventListener("mousemove", function (ev) {
+        if (!pan) return;
+        canvasPane.scrollLeft = pan.sl - (ev.clientX - pan.x);
+        canvasPane.scrollTop  = pan.st - (ev.clientY - pan.y);
+      });
+      window.addEventListener("mouseup", function () {
+        if (!pan) return;
+        pan = null;
+        canvasPane.classList.remove("fc-panning");
+      });
+    })();
+
+    /* ---- side panel collapse + resize ---- */
+    let sideCollapsed = false;
+    collapseBtn.addEventListener("click", function () {
+      sideCollapsed = !sideCollapsed;
+      paneRow.classList.toggle("side-collapsed", sideCollapsed);
+      collapseBtn.textContent = sideCollapsed ? "\u00ab" : "\u00bb";
+      collapseBtn.title = sideCollapsed ? "Expand panel" : "Collapse panel";
+      requestAnimationFrame(function () { if (host.isConnected) render(); });
+    });
+    (function () {
+      let rz = null;
+      resizeHandle.addEventListener("mousedown", function (ev) {
+        ev.preventDefault();
+        rz = { startX: ev.clientX, startW: sidePane.getBoundingClientRect().width };
+        document.body.style.cursor = "col-resize";
+      });
+      window.addEventListener("mousemove", function (ev) {
+        if (!rz) return;
+        const w = Math.max(180, Math.min(520, rz.startW - (ev.clientX - rz.startX)));
+        sidePane.style.width = w + "px";
+        sidePane.style.minWidth = w + "px";
+      });
+      window.addEventListener("mouseup", function () {
+        if (!rz) return;
+        rz = null;
+        document.body.style.cursor = "";
+        if (host.isConnected) render();
+      });
+    })();
 
     /* ---- toolbar ---- */
     const SHAPE_ICONS = {
@@ -635,11 +703,18 @@
     arrangeBtn.addEventListener("click", function () {
       pushHistory();
       autoArrangeAll();
+      markHandRouted();
       render(); renderSide(); onChange();
       setStatus("Connections auto-arranged.");
       setTimeout(function () { setStatus(""); }, 2000);
     });
     tools.appendChild(arrangeBtn);
+    const undoBtn = hEl("button", { type: "button", class: "fc-tool-btn", title: "Undo (Ctrl+Z)" }, "↶ Undo");
+    undoBtn.addEventListener("click", function () { undo(); });
+    tools.appendChild(undoBtn);
+    const redoBtn = hEl("button", { type: "button", class: "fc-tool-btn", title: "Redo (Ctrl+Y)" }, "↷ Redo");
+    redoBtn.addEventListener("click", function () { redo(); });
+    tools.appendChild(redoBtn);
     tools.appendChild(statusEl);
 
     /* ---- undo/redo (local to editor) ---- */
@@ -902,6 +977,7 @@
           redoStack.length = 0;
         }
         e.bend = clampBend(e, pt.x, pt.y, b);
+        markHandRouted();
         render(); onChange();
       }
       if (endpointDrag) {
@@ -936,6 +1012,7 @@
             if (endpointDrag.which === "from") { e.from = dt.shape; e.from_side = dt.side; }
             else                                { e.to   = dt.shape; e.to_side   = dt.side; }
             delete e.bend;
+            markHandRouted();
             onChange();
           }
         }
@@ -1170,10 +1247,10 @@
 
     /* ---- side panel ------------------------------------------------ */
     function renderSide() {
-      sidePane.innerHTML = "";
+      sideBody.innerHTML = "";
 
       // Code alongside — always visible at top
-      sidePane.appendChild(hEl("label", { class: "fc-side-label" }, "Code alongside (optional)"));
+      sideBody.appendChild(hEl("label", { class: "fc-side-label" }, "Code alongside (optional)"));
       const codeTA = hEl("textarea", { rows: 4, class: "fc-side-textarea fc-side-code" });
       codeTA.value = p.code_alongside || "";
       codeTA.addEventListener("focus", function () { pushHistory(); });
@@ -1182,12 +1259,12 @@
         else delete p.code_alongside;
         onChange();
       });
-      sidePane.appendChild(codeTA);
-      sidePane.appendChild(hEl("div", { class: "fc-side-hint" },
+      sideBody.appendChild(codeTA);
+      sideBody.appendChild(hEl("div", { class: "fc-side-hint" },
         "Shown above the chart. Useful for 'build the flowchart from this code' framing."));
 
       if (!sel) {
-        sidePane.appendChild(hEl("div", { class: "fc-side-empty" },
+        sideBody.appendChild(hEl("div", { class: "fc-side-empty" },
           "Click a shape or arrow to edit it. Add shapes from the toolbar. Hover a shape to see its ports — click one, then click the destination to draw an arrow."));
         return;
       }
@@ -1195,9 +1272,9 @@
       if (sel.type === "shape") {
         const s = model.shapes.find(function (x) { return x.id === sel.id; });
         if (!s) { clearSel(); return; }
-        sidePane.appendChild(hEl("h3", { class: "fc-side-h" }, "Shape"));
+        sideBody.appendChild(hEl("h3", { class: "fc-side-h" }, "Shape"));
         // Text
-        sidePane.appendChild(hEl("label", { class: "fc-side-label" }, "Text"));
+        sideBody.appendChild(hEl("label", { class: "fc-side-label" }, "Text"));
         const ta = hEl("textarea", { rows: 2, class: "fc-side-textarea" });
         ta.value = s.text || "";
         ta.addEventListener("focus", function () { pushHistory(); });
@@ -1207,13 +1284,13 @@
         ta.addEventListener("blur", function () {
           if (sel && sel.type === "shape" && sel.id === s.id) renderSide();
         });
-        sidePane.appendChild(ta);
-        sidePane.appendChild(hEl("div", { class: "fc-side-hint" },
+        sideBody.appendChild(ta);
+        sideBody.appendChild(hEl("div", { class: "fc-side-hint" },
           "Use {{name}} to add a blank. e.g. score {{cmp}} 50"));
 
         // Kind picker
-        sidePane.appendChild(hEl("label", { class: "fc-side-label" }, "Kind"));
-        sidePane.appendChild(buildShapePicker(s.kind, function (k) {
+        sideBody.appendChild(hEl("label", { class: "fc-side-label" }, "Kind"));
+        sideBody.appendChild(buildShapePicker(s.kind, function (k) {
           pushHistory(); s.kind = k; render(); renderSide(); onChange();
         }));
 
@@ -1225,22 +1302,22 @@
         r2.appendChild(numField("Col", s.col, function (v) {
           s.col = Math.max(0, v | 0); render(); onChange();
         }));
-        sidePane.appendChild(r2);
+        sideBody.appendChild(r2);
 
-        sidePane.appendChild(hEl("div", { class: "fc-side-hint" }, "ID: " + s.id));
+        sideBody.appendChild(hEl("div", { class: "fc-side-hint" }, "ID: " + s.id));
 
         // Blanks for this shape
         const ids = splitLabel(s.text || "").filter(function (x) { return x.t === "blank"; })
                                             .map(function (x) { return x.id; });
         if (ids.length) {
-          sidePane.appendChild(hEl("h3", { class: "fc-side-h", style: "margin-top:14px" }, "Blanks in this shape"));
+          sideBody.appendChild(hEl("h3", { class: "fc-side-h", style: "margin-top:14px" }, "Blanks in this shape"));
           ids.forEach(function (bid) {
             let b = model.blanks.find(function (x) { return x.id === bid; });
             if (!b) {
               b = { id: bid, mode: "free_text", answer: "", accepted: [], case_sensitive: false, width_hint: 4 };
               model.blanks.push(b);
             }
-            sidePane.appendChild(hEl("label", { class: "fc-side-label" }, "{{" + bid + "}} mode"));
+            sideBody.appendChild(hEl("label", { class: "fc-side-label" }, "{{" + bid + "}} mode"));
             const modeSel = hEl("select", { class: "fc-side-select" });
             ["free_text", "select"].forEach(function (m) {
               const opt = hEl("option", null, m);
@@ -1255,9 +1332,9 @@
               if (b.mode === "select" && !Array.isArray(b.options)) b.options = [];
               onChange(); renderSide();
             });
-            sidePane.appendChild(modeSel);
+            sideBody.appendChild(modeSel);
 
-            sidePane.appendChild(hEl("label", { class: "fc-side-label" }, "Answer"));
+            sideBody.appendChild(hEl("label", { class: "fc-side-label" }, "Answer"));
             const ansInp = hEl("input", { class: "fc-side-input" });
             ansInp.value = b.answer || "";
             ansInp.addEventListener("focus", function () { pushHistory(); });
@@ -1266,10 +1343,10 @@
               b.accepted = [ansInp.value];
               onChange();
             });
-            sidePane.appendChild(ansInp);
+            sideBody.appendChild(ansInp);
 
             if (b.mode === "select") {
-              sidePane.appendChild(hEl("label", { class: "fc-side-label" }, "Options (one per line)"));
+              sideBody.appendChild(hEl("label", { class: "fc-side-label" }, "Options (one per line)"));
               const optTA = hEl("textarea", { rows: 3, class: "fc-side-textarea" });
               optTA.value = (b.options || []).join("\n");
               optTA.addEventListener("focus", function () { pushHistory(); });
@@ -1277,22 +1354,22 @@
                 b.options = optTA.value.split("\n").map(function (x) { return x.trim(); }).filter(Boolean);
                 onChange();
               });
-              sidePane.appendChild(optTA);
+              sideBody.appendChild(optTA);
             }
           });
         }
 
         const delBtn = hEl("button", { type: "button", class: "fc-side-btn fc-side-danger", style: "margin-top:14px" }, "Delete shape");
         delBtn.addEventListener("click", function () { deleteShape(s.id); });
-        sidePane.appendChild(delBtn);
+        sideBody.appendChild(delBtn);
       } else {
         // edge
         const e = model.edges[sel.index];
         if (!e) { clearSel(); return; }
-        sidePane.appendChild(hEl("h3", { class: "fc-side-h" }, "Arrow"));
-        sidePane.appendChild(hEl("div", { class: "fc-side-hint" }, e.from + " → " + e.to));
+        sideBody.appendChild(hEl("h3", { class: "fc-side-h" }, "Arrow"));
+        sideBody.appendChild(hEl("div", { class: "fc-side-hint" }, e.from + " → " + e.to));
         // Label
-        sidePane.appendChild(hEl("label", { class: "fc-side-label" }, "Label (Yes/No, optional)"));
+        sideBody.appendChild(hEl("label", { class: "fc-side-label" }, "Label (Yes/No, optional)"));
         const labInp = hEl("input", { class: "fc-side-input" });
         labInp.value = e.label || "";
         labInp.addEventListener("focus", function () { pushHistory(); });
@@ -1301,10 +1378,10 @@
           else delete e.label;
           render(); onChange();
         });
-        sidePane.appendChild(labInp);
+        sideBody.appendChild(labInp);
 
         // Exit / enter sides
-        sidePane.appendChild(selField("Exit side", e.from_side || "(auto)",
+        sideBody.appendChild(selField("Exit side", e.from_side || "(auto)",
           ["(auto)", "top", "right", "bottom", "left"], function (v) {
             if (v !== "(auto)" && decisionExitConflict(e.from, v, e)) {
               setStatus("That exit port is already used by this decision's other branch.");
@@ -1316,7 +1393,7 @@
             if (v === "(auto)") delete e.from_side; else e.from_side = v;
             delete e.bend; render(); renderSide(); onChange();
           }));
-        sidePane.appendChild(selField("Enter side", e.to_side || "(auto)",
+        sideBody.appendChild(selField("Enter side", e.to_side || "(auto)",
           ["(auto)", "top", "right", "bottom", "left"], function (v) {
             pushHistory();
             if (v === "(auto)") delete e.to_side; else e.to_side = v;
@@ -1327,15 +1404,15 @@
           rb.addEventListener("click", function () {
             pushHistory(); delete e.bend; render(); renderSide(); onChange();
           });
-          sidePane.appendChild(rb);
+          sideBody.appendChild(rb);
         } else {
-          sidePane.appendChild(hEl("div", { class: "fc-side-hint" }, "Drag the orange dot on the arrow to bend it."));
+          sideBody.appendChild(hEl("div", { class: "fc-side-hint" }, "Drag the orange dot on the arrow to bend it."));
         }
         const delBtn = hEl("button", { type: "button", class: "fc-side-btn fc-side-danger", style: "margin-top:14px" }, "Delete arrow");
         delBtn.addEventListener("click", function () {
           pushHistory(); model.edges.splice(sel.index, 1); clearSel(); onChange();
         });
-        sidePane.appendChild(delBtn);
+        sideBody.appendChild(delBtn);
       }
     }
     function numField(label, val, on) {
@@ -1366,6 +1443,11 @@
 
     /* ---- teardown / first render ---- */
     syncBlanks();
+    // Match the student view: a chart that hasn't been hand-routed gets clean
+    // ports computed on open, so the editor shows what the student will see.
+    if (p.flowchart.auto_layout !== false) {
+      autoArrangeAll();
+    }
     render();
     renderSide();
     // The canvas pane may not have its final size on the very first render
@@ -1414,11 +1496,23 @@
 .pp-io         { fill: var(--io, #E3EFE8); }
 .fc-editor-status { font-size: 13px; padding: 4px 10px; border-radius: 7px; margin-left: auto; min-height: 1px; }
 .fc-editor-status.active { background: #FDF1DF; border: 1px solid var(--focus, #E07A00); color: #8a4b00; }
-.fc-editor-paneRow { display: flex; gap: 8px; align-items: stretch; min-height: 520px; height: 70vh; }
-.fc-editor-canvas { flex: 1; min-width: 0; height: 100%; overflow: auto; background: #fff; border: 1px solid var(--border, #D8D0C4); border-radius: 8px; padding: 8px; }
+.fc-editor-paneRow { display: flex; gap: 0; align-items: stretch; min-height: 520px; height: 70vh; }
+.fc-editor-canvas { flex: 1; min-width: 0; height: 100%; overflow: auto; background: #fff; border: 1px solid var(--border, #D8D0C4); border-radius: 8px; padding: 0; cursor: grab; scrollbar-width: none; -ms-overflow-style: none; }
+.fc-editor-canvas::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.fc-editor-canvas.fc-panning { cursor: grabbing; }
 .fc-editor-svg { display: block; background: #fff; -webkit-user-select: none; -moz-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .fc-editor-svg text, .fc-editor-svg .fc-shape-text, .fc-editor-svg .fc-edge-label { -webkit-user-select: none; -moz-user-select: none; user-select: none; }
-.fc-editor-side { width: 260px; min-width: 260px; padding: 10px; background: var(--panel, #fff); border: 1px solid var(--border, #D8D0C4); border-radius: 8px; height: 100%; overflow: auto; box-sizing: border-box; }
+/* Resize handle sits between the canvas and the side panel. */
+.fc-editor-resize { flex: 0 0 8px; cursor: col-resize; background: transparent; position: relative; }
+.fc-editor-resize::before { content: ""; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 3px; height: 40px; border-radius: 2px; background: var(--border-strong, #B7AC99); opacity: 0.5; }
+.fc-editor-resize:hover::before { opacity: 1; }
+.fc-editor-side { width: 280px; min-width: 180px; max-width: 520px; padding: 10px; background: var(--panel, #fff); border: 1px solid var(--border, #D8D0C4); border-radius: 8px; height: 100%; overflow: auto; box-sizing: border-box; position: relative; }
+/* Collapsed side panel: a thin strip with just the expand button. */
+.fc-editor-paneRow.side-collapsed .fc-editor-side { width: 32px; min-width: 32px; max-width: 32px; padding: 6px 2px; overflow: hidden; }
+.fc-editor-paneRow.side-collapsed .fc-editor-resize { display: none; }
+.fc-editor-paneRow.side-collapsed .fc-side-body { display: none; }
+.fc-side-collapse-btn { position: absolute; top: 6px; right: 6px; z-index: 2; font: inherit; line-height: 1; padding: 3px 7px; border: 1px solid var(--border-strong, #B7AC99); border-radius: 6px; background: var(--panel, #fff); cursor: pointer; }
+.fc-editor-paneRow.side-collapsed .fc-side-collapse-btn { right: 4px; left: 4px; padding: 6px 0; text-align: center; }
 .fc-editor-side .fc-side-h { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: #6b6256; margin: 0 0 6px; }
 .fc-editor-side .fc-side-label { display: block; font-size: 12px; margin: 8px 0 3px; color: #444; }
 .fc-editor-side .fc-side-input,.fc-editor-side .fc-side-select,.fc-editor-side .fc-side-textarea { width: 100%; font: inherit; padding: 5px 7px; border: 1px solid var(--border-strong, #B7AC99); border-radius: 6px; background: #fff; box-sizing: border-box; }
@@ -1453,8 +1547,8 @@
 .fc-editor-svg .fc-ed-port.hover-port { opacity: 0; transition: opacity 0.08s; }
 .fc-editor-svg .fc-shape-group:hover .fc-ed-port.hover-port { opacity: 1; }
 .fc-editor-svg .fc-ed-port.drop-target { fill: var(--accent, #2F6FB0); }
-.fc-editor-svg .fc-bend-handle { fill: var(--focus, #E07A00); stroke: #fff; stroke-width: 1.5; cursor: grab; }
-.fc-editor-svg .fc-endpoint-handle { fill: var(--accent, #2F6FB0); stroke: #fff; stroke-width: 1.5; cursor: grab; }
+.fc-editor-svg .fc-bend-handle { fill: var(--focus, #E07A00); stroke: #fff; stroke-width: 1.5; cursor: move; }
+.fc-editor-svg .fc-endpoint-handle { fill: var(--accent, #2F6FB0); stroke: #fff; stroke-width: 1.5; cursor: move; }
 .fc-editor-svg .fc-endpoint-handle.from { fill: #fff; stroke: var(--accent, #2F6FB0); stroke-width: 2; }
 `;
     const tag = document.createElement("style");
