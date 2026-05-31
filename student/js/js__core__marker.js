@@ -359,52 +359,48 @@
     return { ok: true, value: s, raw_type: "bareword" };
   }
 
-  /* Classify ONE input value against ONE column spec. */
+  /* Classify ONE input value against ONE column spec. Returns one of
+     "normal" | "boundary" | "invalid" | "erroneous" per OCR definitions:
+       normal    — correct type, comfortably inside the valid range
+       boundary  — correct type, on the very edge (we define edge ±1)
+       invalid   — correct type, but out of range (rejected), not a boundary
+       erroneous — wrong data type (rejected)
+     Boundary band for range [min,max] = { min-1, min, max, max+1 }. */
   function classifyInput(col, raw) {
     const declared = col.type || "str";
     const parsed = parseLiteral(raw);
     if (!parsed.ok) return "erroneous";
 
-    if (declared === "int") {
-      // int accepts only an int literal — float, str, bool all wrong.
-      if (parsed.raw_type !== "int") return "erroneous";
+    if (declared === "int" || declared === "float") {
+      const numericType = (declared === "int")
+        ? (parsed.raw_type === "int")
+        : (parsed.raw_type === "int" || parsed.raw_type === "float");
+      if (!numericType) return "erroneous";  // wrong data type
       const v = parsed.value;
-      if (col.min != null && v < col.min) return "erroneous";
-      if (col.max != null && v > col.max) return "erroneous";
-      if (col.min != null && v === col.min) return "boundary";
-      if (col.max != null && v === col.max) return "boundary";
+      const hasMin = col.min != null, hasMax = col.max != null;
+      // Boundary: exactly on an edge or one step beyond it.
+      if (hasMin && (v === col.min || v === col.min - 1)) return "boundary";
+      if (hasMax && (v === col.max || v === col.max + 1)) return "boundary";
+      // Explicit decision boundaries (e.g. an 18 threshold) — within ±1.
       const bs = Array.isArray(col.decision_boundaries) ? col.decision_boundaries : [];
-      for (const b of bs) {
-        if (Math.abs(v - b) <= 1) return "boundary";
-      }
-      return "normal";
-    }
-    if (declared === "float") {
-      if (parsed.raw_type !== "int" && parsed.raw_type !== "float") return "erroneous";
-      const v = parsed.value;
-      if (col.min != null && v < col.min) return "erroneous";
-      if (col.max != null && v > col.max) return "erroneous";
-      if (col.min != null && v === col.min) return "boundary";
-      if (col.max != null && v === col.max) return "boundary";
-      const bs = Array.isArray(col.decision_boundaries) ? col.decision_boundaries : [];
-      for (const b of bs) {
-        if (Math.abs(v - b) <= 1) return "boundary";
-      }
+      for (const b of bs) { if (Math.abs(v - b) <= 1) return "boundary"; }
+      // Invalid: correct type but out of range (beyond the boundary band).
+      if (hasMin && v < col.min - 1) return "invalid";
+      if (hasMax && v > col.max + 1) return "invalid";
       return "normal";
     }
     if (declared === "str") {
-      // Student must wrap strings in quotes for it to count as a string.
-      // Barewords are erroneous (they would error or behave unexpectedly
-      // when passed to a function expecting a str).
+      // A string must be quoted to count as the str type; otherwise the
+      // wrong data type → erroneous.
       if (parsed.raw_type !== "str") return "erroneous";
-      const v = parsed.value;
-      const len = v.length;
-      if (col.min_length != null && len < col.min_length) return "erroneous";
-      if (col.max_length != null && len > col.max_length) return "erroneous";
-      if (col.min_length != null && len === col.min_length) return "boundary";
-      if (col.max_length != null && len === col.max_length) return "boundary";
+      const len = parsed.value.length;
+      const hasMin = col.min_length != null, hasMax = col.max_length != null;
+      if (hasMin && (len === col.min_length || len === col.min_length - 1)) return "boundary";
+      if (hasMax && (len === col.max_length || len === col.max_length + 1)) return "boundary";
       const bv = Array.isArray(col.boundary_values) ? col.boundary_values : [];
-      if (bv.indexOf(v) >= 0) return "boundary";
+      if (bv.indexOf(parsed.value) >= 0) return "boundary";
+      if (hasMin && len < col.min_length - 1) return "invalid";
+      if (hasMax && len > col.max_length + 1) return "invalid";
       return "normal";
     }
     if (declared === "bool") {
@@ -413,9 +409,11 @@
     return "normal";
   }
 
-  /* Pick the most-extreme classification across inputs of a row. */
+  /* Pick the most-severe classification across inputs of a row.
+     Severity order: erroneous > invalid > boundary > normal. */
   function rollupClassifications(cs) {
     if (cs.indexOf("erroneous") >= 0) return "erroneous";
+    if (cs.indexOf("invalid") >= 0)   return "invalid";
     if (cs.indexOf("boundary") >= 0)  return "boundary";
     return "normal";
   }
@@ -428,74 +426,63 @@
     const cells = {};  // "ri:colId" -> bool
     let allOk = true;
 
+    // The expected-output cell key was renamed output -> expected_output.
+    // Accept both so old packs keep working.
+    function outVal(v) { return (v && v.expected_output != null && v.expected_output !== "")
+      ? v.expected_output : (v && v.output != null ? v.output : ""); }
+
     specRows.forEach(function (specRow, ri) {
       const sv = (specRow && specRow.values) || {};
-      const pre = Array.isArray(specRow && specRow.prefilled) ? specRow.prefilled : [];
       const stud = (respRows[ri] && respRows[ri].values) || {};
-      // The effective value of each cell: teacher's for prefilled, student's otherwise.
-      function eff(colId) {
-        return pre.indexOf(colId) >= 0 ? sv[colId] : stud[colId];
+      // Back-compat: honour an explicit prefilled list if present; otherwise
+      // a cell is teacher-GIVEN iff its teacher value is non-empty.
+      const pre = Array.isArray(specRow && specRow.prefilled) ? specRow.prefilled : null;
+      function given(colId) {
+        if (pre) return pre.indexOf(colId) >= 0;
+        if (colId === "test_type") return (sv.test_type || "") !== "";
+        if (colId === "expected_output" || colId === "output") return outVal(sv) !== "";
+        return sv[colId] != null && String(sv[colId]) !== "";
       }
+      // Effective value of a cell: teacher's if given, else student's.
+      function eff(colId) { return given(colId) ? sv[colId] : stud[colId]; }
+
       // Classify each input from its effective value, then roll up.
       const classifications = cols.map(c => classifyInput(c, eff(c.id)));
       const rowClass = rollupClassifications(classifications);
 
-      const effType    = eff("test_type") || "";
-      const typeIsPre  = pre.indexOf("test_type") >= 0;
-      const rowOk      = (effType !== "" && effType === rowClass);
+      const typeGiven = given("test_type");
+      const effType   = (typeGiven ? sv.test_type : (stud.test_type || "")) || "";
 
-      // ---- test_type cell (graded only when editable) ----
-      if (!typeIsPre) {
-        const ok = rowOk;
+      // ---- test type cell (graded only when the student fills it) ----
+      if (!typeGiven) {
+        const ok = (effType !== "" && effType === rowClass);
         cells[ri + ":test_type"] = ok;
         if (!ok) allOk = false;
       }
 
-      // ---- input cells (graded only when editable) ----
-      // Three cases:
-      //   1. test_type anchored AND row is correct (rowClass matches
-      //      effType): all editable input cells are green.
-      //   2. test_type anchored AND row is wrong: all editable input
-      //      cells are red — the student's inputs failed to satisfy
-      //      the teacher's anchor.
-      //   3. test_type student-supplied: the student is inventing a
-      //      pair. Mark inputs by whether they parse as the declared
-      //      type (or just parse at all, when the row classifies as
-      //      erroneous — the wrong type IS the point).
+      // ---- input (test data) cells (graded only when student-filled) ----
+      // The student's value must classify as the row's effective test type
+      // (teacher-given, or the type the student themselves selected).
+      const targetType = typeGiven ? effType : (effType || rowClass);
       cols.forEach(function (c) {
-        if (pre.indexOf(c.id) >= 0) return;  // teacher prefilled — not graded
+        if (given(c.id)) return;  // teacher supplied — not graded
+        const cls = classifyInput(c, stud[c.id]);
+        // A single-input row: the input's class must match the target type.
+        // (Multi-input rows: each input must be consistent with the row type
+        //  via the rollup, so accept if this input's class is no more severe
+        //  than the target and the rollup matches.)
         let ok;
-        if (typeIsPre) {
-          ok = rowOk;
+        if (cols.length === 1) {
+          ok = (cls === targetType);
         } else {
-          const raw = stud[c.id];
-          const parsed = parseLiteral(raw);
-          let typeMatch = false;
-          if (parsed.ok) {
-            if      (c.type === "int")   typeMatch = parsed.raw_type === "int";
-            else if (c.type === "float") typeMatch = parsed.raw_type === "int" || parsed.raw_type === "float";
-            else if (c.type === "str")   typeMatch = parsed.raw_type === "str";
-            else if (c.type === "bool")  typeMatch = parsed.raw_type === "bool";
-          }
-          // Erroneous classification accepts ANY parseable value (wrong
-          // type is the test). Normal/boundary need a type match.
-          ok = (rowClass === "erroneous") ? parsed.ok : typeMatch;
+          ok = (rowClass === targetType);
         }
         cells[ri + ":" + c.id] = ok;
         if (!ok) allOk = false;
       });
 
-      // Output cell: exact-match after baseClean, IF the teacher
-      // supplied an expected output for this row. Skip if blank.
-      if (pre.indexOf("output") < 0) {
-        const expected = (sv.output != null) ? String(sv.output) : "";
-        const given    = (stud.output != null) ? String(stud.output) : "";
-        if (expected !== "") {
-          const ok = N.baseClean(expected) === N.baseClean(given);
-          cells[ri + ":output"] = ok;
-          if (!ok) allOk = false;
-        }
-      }
+      // Expected output is teacher-authored context — never student-graded
+      // (we don't execute code), so it is not added to `cells`.
     });
 
     return result(allOk ? "correct" : "incorrect", allOk ? 1 : 0,

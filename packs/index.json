@@ -3,6 +3,15 @@
   "generated": "2026-05-31",
   "packs": [
     {
+      "id": "builtin-feature-tour",
+      "title": "Feature tour: every activity type",
+      "level": "Demo",
+      "description": "Every activity type and permutation, with instructions explaining how each works.",
+      "activities": 21,
+      "sections": 9,
+      "file": "feature-tour.pyquiz"
+    },
+    {
       "id": "builtin-loops-intro",
       "title": "Count-Controlled Loops",
       "level": "KS3",

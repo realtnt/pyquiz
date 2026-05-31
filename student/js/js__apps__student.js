@@ -342,7 +342,7 @@
       {
         type: "testing",
         title: "Testing",
-        desc: "Design a table of test cases — Normal, Boundary and Erroneous — for a function, and predict the expected output.",
+        desc: "Design a table of test cases — Normal, Boundary, Invalid and Erroneous — for a function. Leave cells blank for the student to complete.",
         value: "Test design is explicit in both J277 and H446. Students classify inputs and reason about edge cases — a skill that's hard to practise with code-writing alone.",
         sample: "name   type   expected\n\"Sam\"  normal  Hi, Sam\n\"\"     bound.  Hi, "
       },

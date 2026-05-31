@@ -17,6 +17,7 @@ A pack is a set of activities grouped into **sections**, designed as a journey: 
 THE PACK SHAPE (top level)
 ================================================================
 {
+  "pack_format_version": "0.1",
   "schema_version": "0.1",
   "id": "kebab-case-unique-id",
   "title": "Human-readable pack title",
@@ -168,19 +169,24 @@ THE 9 ACTIVITY TYPES (payload shapes + a real example each)
      "mode": "select_and_fix", "constraint": "add_line",
      "bugs": [{ "line": 2, "category": "logic", "fix": "    print(i * 2)", "accepted_fixes": ["    print(i * 2)"] }] } }
 
-8) testing — design test data (Normal, Boundary, Erroneous) and predict outputs.
+8) testing — design test data for a snippet of code. Columns are Input (variable) | Type of test | Expected output.
    payload: {
-     "code": "def count_up(n):\n    for i in range(n):\n        print(i)",
-     "input_columns": [ { "id": "n", "label": "n", "type": "int",
-                          "min": 0, "max": 100, "decision_boundaries": [0] } ],
+     "code": "def count_up(n):\n    if n < 0 or n > 100:\n        print(\"NOT VALID\")\n        return\n    for i in range(n):\n        print(i)",
+     "output_type": "lines",
+     "input_columns": [ { "id": "n", "label": "n", "type": "int", "min": 0, "max": 100 } ],
      "rows": [
-       { "values": { "n": "3", "output": "0\n1\n2", "test_type": "normal" },    "prefilled": ["n","test_type"] },
-       { "values": { "n": "0", "output": "",        "test_type": "boundary" },  "prefilled": ["n","output"] },
-       { "values": { "n": "-1","output": "",        "test_type": "erroneous" }, "prefilled": ["test_type","output"] }
+       { "values": { "n": "", "test_type": "normal",    "expected_output": "0\n1\n2\n3" } },
+       { "values": { "n": "", "test_type": "invalid",   "expected_output": "NOT VALID" } },
+       { "values": { "n": "", "test_type": "erroneous", "expected_output": "TypeError" } }
      ]
    }
-   - `input_columns` types: "int" | "float" (min/max, decision_boundaries) or "string" (min_length/max_length, boundary_values).
-   - Each row needs the input value(s), the `output`, and `test_type` (normal|boundary|erroneous). `prefilled` lists which cells are shown; the rest the student fills.
+   - IMPORTANT: the code under test MUST validate its input (reject out-of-range values, e.g. `return -1` / `return False` / `print("NOT VALID")`). Otherwise the Invalid category is meaningless — there is nothing to reject. Always write a validating function for testing activities, and only use an `invalid` row when the code actually rejects out-of-range input.
+   - The four OCR test types: `normal` (correct type, accepted), `boundary` (correct type, on the very edge — we count the range edges and one step beyond, e.g. for 0..100 that's -1, 0, 100, 101), `invalid` (correct type but out of range, rejected), `erroneous` (wrong data type, rejected).
+   - `output_type`: how Expected output is shown — "lines" (each printed line on its own row; use for code that prints), "number", "string", "boolean", or "list". Pick the one that matches what the code produces so multi-line output isn't shown as one run-on string. For the example above the output is genuinely three/four separate lines, so use "lines", NOT "0 1 2 3".
+   - `input_columns` types: "int"/"float" (min/max) or "str" (min_length/max_length). The type + range drive the automatic classification of the student's value.
+   - VARY THE ROWS within a table: don't leave the same column blank every time. Mix rows where you give the test data (so the student works out the Type of test) with rows where you give the Type of test (so the student supplies a value). A good table might be e.g. two Normal, a Boundary and an Invalid, with the blank column differing from row to row.
+   - MODEL: for each row, ALWAYS give the `expected_output` (required), plus EXACTLY ONE of the test data or the `test_type` — leave the OTHER one blank ("") and that becomes what the student works out. A non-empty cell is shown to them; the blank cell is theirs to complete. The marker checks the student's value automatically against the type and range (or, for a blank type, infers the type from the given value). Do NOT use a `prefilled` array (legacy) — blanks are implicit. The Input column is shown to the student as "Input (variable)".
+   - Because we don't run code, expected output is shown as context only (never graded), so write it plainly (e.g. "(no output)" or "TypeError" where appropriate). The student is assessed on the test data and/or test type they supply.
 
 9) starter_challenge — an open "now build it" task with examples and a model solution.
    payload: {

@@ -390,7 +390,7 @@
       ["spot_the_bug",      "Spot the bug", "The code is broken. Find the line and write a fix."],
       ["cloze",             "Cloze",     "Fill blanks in a code template — text, dropdown or bank."],
       ["trace_table",       "Trace",     "Step through code line by line, recording variable changes."],
-      ["testing",           "Testing",   "Build a table of test cases — Normal, Boundary and Erroneous — for a function."],
+      ["testing",           "Testing",   "Build a table of test cases — Normal, Boundary, Invalid and Erroneous — for a function."],
       ["starter_challenge", "Challenge", "Open-ended coding task with starter, example calls and a model solution."]
     ];
     const dlg = Modal.open({ title: S.selectActivityType, body: body, maxWidth: "780px" });
@@ -1440,10 +1440,10 @@
   LiveEditors.testing = function (act, host, onChange) {
     const p = act.payload || (act.payload = {});
     if (p.authoring_code == null) {
-      // Seed from existing code + columns (wrap each declared input id in {{}}).
+      // Seed authoring code from existing code + columns (wrap each declared
+      // input id in {{}} so the marker picks it up as a column).
       let ac = p.code || "";
       (p.input_columns || []).forEach(c => {
-        // Best-effort: wrap the first bare occurrence of the column id.
         const re = new RegExp("(?<![\\w{])" + c.id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?![\\w}])");
         if (re.test(ac) && ac.indexOf("{{" + c.id + "}}") < 0) ac = ac.replace(re, "{{" + c.id + "}}");
       });
@@ -1451,15 +1451,92 @@
     }
     p.input_columns = Array.isArray(p.input_columns) ? p.input_columns : [];
     p.rows = Array.isArray(p.rows) ? p.rows : [];
-    // Per-column "student fills" flags live on a small payload map by col id.
-    p._student_fills = p._student_fills || null;  // set lazily below
+    p.output_type = p.output_type || "lines";
+    // Drop legacy authoring state — the new model has no "student fills"
+    // toggles; blank cells are implicitly the student's to complete.
+    delete p._student_fills;
+
+    /* ---- local classifier (mirrors the marker) for inference + the red
+       2-of-3 validation. normal | boundary | invalid | erroneous. ---- */
+    function parseLit(raw) {
+      if (raw == null) return { ok: false, t: "unknown" };
+      const s = String(raw).trim();
+      if (s === "") return { ok: false, t: "unknown" };
+      if (s === "True" || s === "False") return { ok: true, v: s === "True", t: "bool" };
+      if (s === "None") return { ok: true, v: null, t: "none" };
+      if ((s[0] === '"' && s[s.length-1] === '"') || (s[0] === "'" && s[s.length-1] === "'"))
+        return { ok: true, v: s.slice(1,-1), t: "str" };
+      if (/^-?\d+$/.test(s)) return { ok: true, v: parseInt(s,10), t: "int" };
+      if (/^-?\d+\.\d*$/.test(s) || /^-?\.\d+$/.test(s)) return { ok: true, v: parseFloat(s), t: "float" };
+      return { ok: true, v: s, t: "bareword" };
+    }
+    function classify(col, raw) {
+      const d = col.type || "str";
+      const pr = parseLit(raw);
+      if (!pr.ok) return "erroneous";
+      if (d === "int" || d === "float") {
+        const numOk = d === "int" ? pr.t === "int" : (pr.t === "int" || pr.t === "float");
+        if (!numOk) return "erroneous";
+        const v = pr.v, hasMin = col.min != null, hasMax = col.max != null;
+        if (hasMin && (v === col.min || v === col.min - 1)) return "boundary";
+        if (hasMax && (v === col.max || v === col.max + 1)) return "boundary";
+        const bs = Array.isArray(col.decision_boundaries) ? col.decision_boundaries : [];
+        for (const b of bs) if (Math.abs(v - b) <= 1) return "boundary";
+        if (hasMin && v < col.min - 1) return "invalid";
+        if (hasMax && v > col.max + 1) return "invalid";
+        return "normal";
+      }
+      if (d === "str") {
+        if (pr.t !== "str") return "erroneous";
+        const len = pr.v.length, hasMin = col.min_length != null, hasMax = col.max_length != null;
+        if (hasMin && (len === col.min_length || len === col.min_length - 1)) return "boundary";
+        if (hasMax && (len === col.max_length || len === col.max_length + 1)) return "boundary";
+        if (hasMin && len < col.min_length - 1) return "invalid";
+        if (hasMax && len > col.max_length + 1) return "invalid";
+        return "normal";
+      }
+      if (d === "bool") return pr.t === "bool" ? "normal" : "erroneous";
+      return "normal";
+    }
+    function rollup(cs) {
+      if (cs.indexOf("erroneous") >= 0) return "erroneous";
+      if (cs.indexOf("invalid") >= 0) return "invalid";
+      if (cs.indexOf("boundary") >= 0) return "boundary";
+      return "normal";
+    }
+    // Infer the test type for a row from its input values (all must be set).
+    function inferType(r) {
+      if (!p.input_columns.length) return null;
+      const allSet = p.input_columns.every(c => (r.values[c.id] != null && String(r.values[c.id]) !== ""));
+      if (!allSet) return null;
+      return rollup(p.input_columns.map(c => classify(c, r.values[c.id])));
+    }
+    // Does a row satisfy the rules? Output is required; exactly one of
+    // {input, type} must be given (the other is the student's blank).
+    function rowParts(r) {
+      const v = r.values || {};
+      const dataSet = p.input_columns.length > 0 &&
+        p.input_columns.every(c => v[c.id] != null && String(v[c.id]) !== "");
+      const typeSet = (v.test_type || "") !== "";
+      const outSet  = (teacherOut(v) !== "");
+      const other = (dataSet ? 1 : 0) + (typeSet ? 1 : 0);
+      let bad = false, msg = "";
+      if (!outSet) { bad = true; msg = "Expected output is required."; }
+      else if (other === 0) { bad = true; msg = "Fill in the Input or the Type of test — leave the other blank for the student."; }
+      else if (other === 2) { bad = true; msg = "Leave the Input or the Type of test blank for the student to work out."; }
+      return { dataSet, typeSet, outSet, bad, msg };
+    }
+    function teacherOut(v) {
+      if (v && v.expected_output != null && v.expected_output !== "") return v.expected_output;
+      if (v && v.output != null && v.output !== "") return v.output;
+      return "";
+    }
 
     // Derive input columns from {{markers}}, carrying type/min/max by id.
     function deriveColumns() {
       const prevById = {};
       p.input_columns.forEach(c => prevById[c.id] = c);
-      const ids = [];
-      const seen = {};
+      const ids = [], seen = {};
       (p.authoring_code || "").replace(/\{\{([^}]+)\}\}/g, function (_, name) {
         name = name.trim();
         if (name && !seen[name]) { seen[name] = 1; ids.push(name); }
@@ -1474,50 +1551,40 @@
         if (prev.max_length != null) col.max_length = prev.max_length;
         return col;
       });
-      // Student-facing code: strip the braces.
       p.code = (p.authoring_code || "").replace(/\{\{([^}]+)\}\}/g, function (_, name) { return name.trim(); });
     }
-
-    // Which columns the student fills (default: output + test_type). Stored as
-    // a set of column ids; everything else is prefilled (shown).
-    function studentFillSet() {
-      if (!p._student_fills) p._student_fills = ["output", "test_type"];
-      return p._student_fills;
-    }
-    function isStudentFill(colId) { return studentFillSet().indexOf(colId) >= 0; }
-    function toggleStudentFill(colId, on) {
-      const s = studentFillSet().filter(x => x !== colId);
-      if (on) s.push(colId);
-      p._student_fills = s;
-      applyPrefilled();
-    }
-    // Rebuild every row's prefilled list = all columns NOT student-filled, and
-    // prune any stale value keys left over from removed/renamed columns.
-    function applyPrefilled() {
+    // Prune stale value keys; normalise the output key to expected_output.
+    function tidyRows() {
       const inputIds = p.input_columns.map(c => c.id);
-      const allColIds = inputIds.concat(["output", "test_type"]);
+      const keep = inputIds.concat(["test_type", "expected_output"]);
       p.rows.forEach(r => {
         r.values = r.values || {};
-        Object.keys(r.values).forEach(k => {
-          if (allColIds.indexOf(k) < 0) delete r.values[k];
-        });
+        if (r.values.output != null && (r.values.expected_output == null || r.values.expected_output === "")) {
+          r.values.expected_output = r.values.output;
+        }
+        delete r.values.output;
+        delete r.prefilled;  // implicit-blank model — no prefilled list
+        Object.keys(r.values).forEach(k => { if (keep.indexOf(k) < 0) delete r.values[k]; });
         inputIds.forEach(id => { if (r.values[id] == null) r.values[id] = ""; });
-        r.prefilled = allColIds.filter(id => !isStudentFill(id));
+        if (r.values.test_type == null) r.values.test_type = "";
+        if (r.values.expected_output == null) r.values.expected_output = "";
       });
     }
 
     deriveColumns();
+    tidyRows();
 
     // ---- Code box ----
     host.appendChild(DOM.el("h3", null, "Code under test"));
     host.appendChild(DOM.el("p", { class: "le-note", style: "margin:0 0 6px" },
-      "Write the function and wrap each test input in double braces, e.g. def greet({{name}}): — each {{name}} becomes a column in the test table."));
+      "Write the function and wrap each test input in double braces, e.g. def greet({{name}}): — each {{name}} becomes a Test data column."));
     const belowHost = DOM.el("div");
     DOM.codeField(host, p.authoring_code || "", v => {
       p.authoring_code = v;
       const before = p.input_columns.map(c => c.id).join(",");
       deriveColumns();
       if (p.input_columns.map(c => c.id).join(",") !== before) {
+        tidyRows();
         if (belowHost._t) clearTimeout(belowHost._t);
         belowHost._t = setTimeout(() => { belowHost._t = null; renderBelow(); }, 350);
       }
@@ -1533,26 +1600,24 @@
         return;
       }
 
-      // ---- Column config: name | type | min | max | student-fills ----
+      // ---- Inputs: Name | Type | Min | Max  (no "student fills") ----
       const cfg = DOM.el("div", { class: "le-answer" });
-      cfg.appendChild(DOM.el("label", { class: "le-label" }, "Inputs (type and range tell the marker what's Normal / Boundary / Erroneous)"));
+      cfg.appendChild(DOM.el("label", { class: "le-label" },
+        "Inputs (the type and range tell the marker what counts as Normal / Boundary / Invalid / Erroneous)"));
       const cfgTable = DOM.el("table", { class: "trace-table le-test-cfg" });
-      const chead = DOM.el("thead");
-      const chr = DOM.el("tr");
-      ["Name", "Type", "Min", "Max", "Student fills"].forEach(h => chr.appendChild(DOM.el("th", null, h)));
+      const chead = DOM.el("thead"); const chr = DOM.el("tr");
+      ["Name", "Type", "Min", "Max"].forEach(h => chr.appendChild(DOM.el("th", null, h)));
       chead.appendChild(chr); cfgTable.appendChild(chead);
       const cbody = DOM.el("tbody"); cfgTable.appendChild(cbody);
       p.input_columns.forEach(c => {
         const tr = DOM.el("tr");
         tr.appendChild(DOM.el("td", null, DOM.el("code", null, c.id)));
-        // Type select.
         const tsel = DOM.el("select", { class: "le-test-type" });
-        [["str", "str"], ["int", "int"], ["float", "float"], ["bool", "bool"]].forEach(([v, l]) => {
+        [["str","str"],["int","int"],["float","float"],["bool","bool"]].forEach(([v,l]) => {
           const o = DOM.el("option", { value: v }, l); if ((c.type || "str") === v) o.selected = true; tsel.appendChild(o);
         });
         tsel.addEventListener("change", () => { c.type = tsel.value; onChange(); renderBelow(); });
         tr.appendChild(DOM.el("td", null, tsel));
-        // Min / Max (interpreted as length for str).
         function rangeInput(getter, setter) {
           const inp = DOM.el("input", { type: "text", class: "le-trace-cell", autocomplete: "off",
             placeholder: c.type === "str" ? "len" : "—" });
@@ -1560,7 +1625,7 @@
           inp.addEventListener("input", () => {
             const raw = inp.value.trim();
             setter(raw === "" ? null : (c.type === "bool" ? null : Number(raw)));
-            onChange();
+            onChange(); scheduleRedraw();
           });
           return inp;
         }
@@ -1574,31 +1639,30 @@
           tr.appendChild(DOM.el("td", null, rangeInput(() => c.min, v => { if (v == null) delete c.min; else c.min = v; })));
           tr.appendChild(DOM.el("td", null, rangeInput(() => c.max, v => { if (v == null) delete c.max; else c.max = v; })));
         }
-        // Student-fills checkbox for this input column.
-        const cb = DOM.el("input", { type: "checkbox" }); cb.checked = isStudentFill(c.id);
-        cb.addEventListener("change", () => { toggleStudentFill(c.id, cb.checked); onChange(); });
-        tr.appendChild(DOM.el("td", { style: "text-align:center" }, cb));
         cbody.appendChild(tr);
       });
       cfg.appendChild(cfgTable);
-      // Output + Test type "student fills" toggles.
-      const extra = DOM.el("div", { class: "le-test-extra" });
-      [["output", "Expected output"], ["test_type", "Test type"]].forEach(([id, lbl]) => {
-        const w = DOM.el("label", { class: "le-test-fill" });
-        const cb = DOM.el("input", { type: "checkbox" }); cb.checked = isStudentFill(id);
-        cb.addEventListener("change", () => { toggleStudentFill(id, cb.checked); onChange(); });
-        w.appendChild(cb); w.appendChild(document.createTextNode(" Student fills " + lbl));
-        extra.appendChild(w);
+
+      // ---- Output type selector ----
+      const otRow = DOM.el("div", { class: "le-test-extra" });
+      const otLab = DOM.el("label", { class: "le-test-fill", style: "gap:8px" });
+      otLab.appendChild(document.createTextNode("Expected output is a "));
+      const otSel = DOM.el("select", { class: "le-test-type" });
+      [["lines","list of printed lines"],["number","number"],["string","string"],["boolean","boolean (True/False)"],["list","list / array"]].forEach(([v,l]) => {
+        const o = DOM.el("option", { value: v }, l); if ((p.output_type || "lines") === v) o.selected = true; otSel.appendChild(o);
       });
-      cfg.appendChild(extra);
+      otSel.addEventListener("change", () => { p.output_type = otSel.value; onChange(); scheduleRedraw(); });
+      otLab.appendChild(otSel);
+      otRow.appendChild(otLab);
+      cfg.appendChild(otRow);
       belowHost.appendChild(cfg);
 
-      // ---- Test table (teacher writes expected values) ----
+      // ---- Test cases: Test data... | Type of test | Expected output ----
       const tt = DOM.el("div", { class: "le-answer" });
-      tt.appendChild(DOM.el("label", { class: "le-label" }, "Test cases — write the expected values"));
-      const cols = p.input_columns.map(c => ({ id: c.id, label: c.id })).concat([
-        { id: "output", label: "Expected output" }, { id: "test_type", label: "Test type" }
-      ]);
+      tt.appendChild(DOM.el("label", { class: "le-label" }, "Test cases"));
+      const cols = p.input_columns.map(c => ({ id: c.id, label: "Input (" + c.id + ")", kind: "input" }))
+        .concat([{ id: "test_type", label: "Type of test", kind: "type" },
+                 { id: "expected_output", label: "Expected output", kind: "out" }]);
       const wrap = DOM.el("div", { class: "trace-table-wrap" });
       const table = DOM.el("table", { class: "trace-table le-test-table" });
       const thead = DOM.el("thead"); const thr = DOM.el("tr");
@@ -1607,52 +1671,72 @@
       thead.appendChild(thr); table.appendChild(thead);
       const tbody = DOM.el("tbody"); table.appendChild(tbody);
 
-      function redrawRows(focus) {
+      function redrawRows() {
         tbody.innerHTML = "";
-        if (!p.rows.length) tbody.appendChild(DOM.el("tr", null, DOM.el("td", { class: "le-trace-empty", colspan: String(cols.length + 1) }, "No test cases yet — use + to add one.")));
+        if (!p.rows.length) tbody.appendChild(DOM.el("tr", null,
+          DOM.el("td", { class: "le-trace-empty", colspan: String(cols.length + 1) }, "No test cases yet — use + to add one.")));
         p.rows.forEach((r, ri) => {
           r.values = r.values || {};
+          const parts = rowParts(r);
+          const inferred = inferType(r);
           const tr = DOM.el("tr");
+          if (parts.bad) tr.classList.add("le-test-rowbad");
           cols.forEach(c => {
             const td = DOM.el("td");
             if (c.id === "test_type") {
               const sel = DOM.el("select", { class: "le-test-type" });
-              [["", "—"], ["normal", "Normal"], ["boundary", "Boundary"], ["erroneous", "Erroneous"]].forEach(([v, l]) => {
-                const o = DOM.el("option", { value: v }, l); if ((r.values.test_type || "") === v) o.selected = true; sel.appendChild(o);
-              });
-              sel.addEventListener("change", () => { r.values.test_type = sel.value; onChange(); });
+              const opts = [["", inferred ? ("(auto: " + cap(inferred) + ")") : "(blank — student fills)"],
+                ["normal","Normal"],["boundary","Boundary"],["invalid","Invalid"],["erroneous","Erroneous"]];
+              opts.forEach(([v,l]) => { const o = DOM.el("option", { value: v }, l); if ((r.values.test_type || "") === v) o.selected = true; sel.appendChild(o); });
+              sel.addEventListener("change", () => { r.values.test_type = sel.value; onChange(); scheduleRedraw(); });
               td.appendChild(sel);
             } else {
               const inp = DOM.el("input", { type: "text", class: "le-trace-cell", autocomplete: "off", spellcheck: "false",
-                placeholder: c.id === "output" ? "expected output" : "value" });
+                placeholder: c.id === "expected_output" ? "expected output" : "value (blank = student fills)" });
               inp.value = r.values[c.id] == null ? "" : r.values[c.id];
               inp.addEventListener("input", () => { r.values[c.id] = inp.value; onChange(); });
+              inp.addEventListener("change", () => { scheduleRedraw(); });
               td.appendChild(inp);
             }
-            if (isStudentFill(c.id)) td.classList.add("le-test-studentcell");
             tr.appendChild(td);
           });
           const delTd = DOM.el("td");
-          const del = DOM.button("\ud83d\uddd1", () => { p.rows.splice(ri, 1); applyPrefilled(); onChange(); redrawRows(); }, "icon");
+          const del = DOM.button("\ud83d\uddd1", () => { p.rows.splice(ri, 1); onChange(); redrawRows(); }, "icon");
           del.classList.add("le-line-del"); del.title = "Remove test case";
           delTd.appendChild(del); tr.appendChild(delTd);
           tbody.appendChild(tr);
+          if (parts.bad) {
+            const warnTr = DOM.el("tr", { class: "le-test-rowwarn" });
+            warnTr.appendChild(DOM.el("td", { colspan: String(cols.length + 1) }, parts.msg));
+            tbody.appendChild(warnTr);
+          }
         });
       }
+      function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
       redrawRows();
       wrap.appendChild(table); tt.appendChild(wrap);
       const addRow = DOM.button("+ Add test case", () => {
-        const v = {}; cols.forEach(c => v[c.id] = "");
-        p.rows.push({ values: v, prefilled: [] });
-        applyPrefilled(); onChange(); redrawRows();
+        const v = {}; p.input_columns.forEach(c => v[c.id] = "");
+        v.test_type = ""; v.expected_output = "";
+        p.rows.push({ values: v }); onChange(); redrawRows();
       }, "ghost");
       addRow.classList.add("le-add-btn");
       tt.appendChild(addRow);
-      tt.appendChild(DOM.el("p", { class: "le-note" },
-        "Shaded columns are the ones the student fills in; the rest are shown to them. Toggle that with the \u201cStudent fills\u201d checkboxes above."));
+      const noteWrap = DOM.el("div", { class: "le-note" });
+      const ul = DOM.el("ul", { class: "le-test-instr" });
+      [ "Fill in the Expected output (required).",
+        "Fill in one of the other two — the Input or the Type of test.",
+        "The one you leave blank is what the student works out." ].forEach(t => ul.appendChild(DOM.el("li", null, t)));
+      noteWrap.appendChild(ul);
+      noteWrap.appendChild(DOM.el("p", { style: "margin:6px 0 0" },
+        "For an Invalid case to make sense, the code under test must validate its input — e.g. reject out-of-range values by returning -1, False or \"NOT VALID\". The student's value is then checked automatically against the input's type and range."));
+      tt.appendChild(noteWrap);
       belowHost.appendChild(tt);
 
-      applyPrefilled();
+      function scheduleRedraw() {
+        if (tbody._t) clearTimeout(tbody._t);
+        tbody._t = setTimeout(() => { tbody._t = null; redrawRows(); }, 250);
+      }
     }
     renderBelow();
   };
@@ -1731,9 +1815,12 @@
     pane.appendChild(body);
     props.appendChild(pane);
 
-    // Form sections (Core … Advanced) and, at the bottom, Validation.
+    // Form sections (Core … Advanced) scroll inside the body; the
+    // Validation section is appended to the PANE (not the body) so it
+    // stays pinned at the bottom edge — mirroring the student tool's
+    // Help section.
     renderForm(body, act);
-    renderValidationSection(body, act);
+    renderValidationSection(pane, act);
   }
 
   /* Compact preset palette for the colour swatch picker.
@@ -2100,7 +2187,7 @@
     props.appendChild(pane);
     body.appendChild(DOM.el("p", { style: "color:var(--muted);font-size:0.85em;margin:0 0 10px" },
       "Editing pack details. Select an activity on the left to edit its properties."));
-    renderValidationSection(body, null);
+    renderValidationSection(pane, null);
   }
 
   /* Back-compat shim: some callers still invoke renderSidePanel() to

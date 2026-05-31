@@ -202,25 +202,30 @@ body {
 .topbar-pack-title { color: var(--muted); font-size: 0.95em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .topbar-spacer { flex: 1 1 auto; }
 
+/* Toolbar: every button the same 38px square; A−/A+ slightly smaller text.
+   Matches the teacher tool so both apps share one icon language. */
+.toolbar .btn.icon {
+  width: 38px; height: 38px; min-width: 38px; min-height: 38px;
+  padding: 0; display: inline-flex; align-items: center; justify-content: center;
+}
+.toolbar .btn.icon svg { display: block; }
+.toolbar .btn.icon.icon-sm { font-size: 0.82em; }
+.toolbar-sep { width: 1px; height: 26px; background: var(--border); margin: 0 4px; display: inline-block; }
+
 /* When no pack is loaded (welcome / loading screen) the burger menus
    are meaningless — there are no panes to toggle — so hide them
    entirely. Class is set on <body> in showLoader() and cleared when a
    pack loads. */
 body.welcome-mode .topbar .burger { display: none; }
 
-/* Narrow-screen topbar — phones and small tablets in portrait. Strip
-   the topbar down to the essentials: Export, Load pack (icon only),
-   Settings, then the right burger. The size +/- and theme toggle
-   icons hide; the "Load pack" label collapses to just the 📂 icon. */
+/* Narrow-screen topbar — phones and small tablets in portrait. The
+   size +/- and theme toggle icons hide; the icon buttons stay. */
 @media (max-width: 640px) {
   .topbar { padding: 8px 10px; gap: 8px; }
   .topbar h1 { font-size: 1em; min-width: 0; }
   .topbar .meta { display: none; }
   .topbar .right { gap: 4px; }
   .topbar .right .mobile-hide { display: none; }
-  .topbar .right #load-btn .btn-label { display: none; }
-  .topbar .right #load-btn { padding: 6px 10px; font-size: 1.05em; line-height: 1; }
-  .topbar-gap { width: 6px; }
   .topbar .btn.icon { padding: 6px 9px; min-width: 38px; min-height: 38px; }
   .topbar .burger { padding: 6px 9px; min-width: 38px; min-height: 38px; }
 }
@@ -305,12 +310,18 @@ body.welcome-mode .topbar .burger { display: none; }
 }
 .task-list-footer {
   /* Sticky footer area below the scroll region. Used by the teacher
-     tool for the "+ Add activity" button; the student tool currently
-     has no footer content but the structure is shared. */
+     tool for the "+ Add activity" button; in the student tool it holds
+     the score + progress. Its min-height matches the collapsed Help
+     summary in the Properties panel so the two bottom strips line up. */
   flex-shrink: 0;
-  padding: 10px 12px;
+  padding: 10px 16px;
   border-top: 1px solid var(--border);
   background: var(--pane);
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
 }
 /* The side panel is laid out as a flex column with two visible regions:
    the .feedback-stack (flex: 1, scrollable) and .help-section
@@ -1149,9 +1160,10 @@ body.welcome-mode .topbar .burger { display: none; }
 .help-section > summary {
   list-style: none;
   cursor: pointer;
-  /* Extra top padding so the disclosure triangle has breathing room
-     from the divider line above. Also keeps the rotated triangle (▼)
-     fully visible when the section is open instead of clipping. */
+  /* Min-height matches the Activities score footer so the two bottom
+     strips line up across the panels. */
+  min-height: 63px;
+  box-sizing: border-box;
   padding: 16px 0 14px;
   font-weight: 600;
   font-size: 0.95em;

@@ -402,7 +402,7 @@
     },
 
     testing: {
-      description: "Build a table of test cases for a snippet of code. The student fills any cells the teacher hasn't pre-filled, picks Normal/Boundary/Erroneous from a drop-down for the Test type column, and the marker auto-classifies the input against the declared type and range to check the student's choice. Designed for J277/H446-style testing questions.",
+      description: "Build a table of test cases for a snippet of code. Columns are Test data | Type of test | Expected output. The teacher fills some cells and leaves others blank — whatever is blank is what the STUDENT completes (at least two of the three pieces per row). The student's value(s) are checked automatically against the input's type and range and classified Normal, Boundary, Invalid or Erroneous. Designed for J277/H446-style testing questions.",
       fields: {
         code:          { type: "code", required: true, description: "The code under test." },
         function_name: { type: "string", required: false, description: "Used in I/O panel hints if the code defines a function." },

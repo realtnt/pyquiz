@@ -25,12 +25,17 @@
     </a>
     <span class="topbar-pack-title" id="pack-title"></span>
     <span class="topbar-spacer" aria-hidden="true"></span>
-    <div class="right">
-      <button class="btn icon mobile-hide" id="size-down" aria-label="Decrease text size" title="Smaller text">A−</button>
-      <button class="btn icon mobile-hide" id="size-up" aria-label="Increase text size" title="Larger text">A+</button>
+    <div class="right toolbar">
+      <button class="btn icon" id="load-btn" aria-label="Load a pack" title="Load — open a .pyquiz pack from your computer">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/></svg>
+      </button>
+      <button class="btn icon" id="export-btn" aria-label="Export progress" title="Export — download your progress">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M4 20h16"/></svg>
+      </button>
+      <span class="toolbar-sep" aria-hidden="true"></span>
+      <button class="btn icon icon-sm mobile-hide" id="size-down" aria-label="Decrease text size" title="Smaller text">A−</button>
+      <button class="btn icon icon-sm mobile-hide" id="size-up" aria-label="Increase text size" title="Larger text">A+</button>
       <button class="btn icon mobile-hide" id="theme-btn" aria-label="Cycle theme" title="Cycle theme (default / dark / high contrast)">◐</button>
-      <button class="btn icon" id="export-btn" aria-label="Export progress" title="Export progress">⤓</button>
-      <button class="btn primary" id="load-btn" aria-label="Load a pack" title="Load a .pyquiz pack from your computer"><span class="btn-icon" aria-hidden="true">📂</span><span class="btn-label"> Load pack</span></button>
       <button class="btn icon" id="settings-btn" aria-label="Open settings" title="Settings">⚙</button>
     </div>
   </header>

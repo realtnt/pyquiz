@@ -402,49 +402,50 @@
     },
 
     testing: {
-      description: "Build a table of test cases for a snippet of code. The student fills any cells the teacher hasn't pre-filled, picks Normal/Boundary/Erroneous from a drop-down for the Test type column, and the marker auto-classifies the input against the declared type and range to check the student's choice. Designed for J277/H446-style testing questions.",
+      description: "Build a table of test cases for a snippet of code. Columns are Test data | Type of test | Expected output. The teacher fills some cells and leaves others blank — whatever is blank is what the STUDENT completes. Each test case needs at least two of the three pieces. The student's value(s) are checked automatically against the input's declared type and range: the marker classifies them as Normal, Boundary, Invalid or Erroneous (OCR definitions), so for Invalid/Erroneous the teacher need not pin an exact value. Designed for J277/H446-style testing questions.",
       fields: {
         code:          { type: "code", required: true, description: "The code under test." },
         function_name: { type: "string", required: false, description: "Used in I/O panel hints if the code defines a function." },
+        output_type:   { type: "enum", required: false, values: ["lines", "number", "string", "boolean", "list"], description: "How the Expected output is shown. `lines` (default) renders each printed line on its own row — use this for code that prints; `number`/`string`/`boolean`/`list` for a single returned value. Pick the one matching what the code produces so multi-line output isn't shown as one run-on string." },
         input_columns: {
           type: "array", required: true,
-          description: "One entry per input. Each one becomes a column in the test table to the left of Expected output and Test type.",
+          description: "One entry per input. Each becomes a Test data column. The type + range define the Normal/Boundary/Invalid/Erroneous classification: boundary = the edge values min, max and one step beyond (min-1, max+1); invalid = correct type but further out of range; erroneous = wrong data type.",
           items: {
             type: "object",
             shape: {
               id:    { type: "id",     required: true, description: "Stable identifier; used as the cell key in row.values." },
               label: { type: "string", required: true, description: "Column header shown to the student." },
               type:  { type: "enum",   required: true, values: ["int", "float", "str", "bool"] },
-              min:                  { type: "number", required: false, description: "Inclusive lower bound for int/float." },
-              max:                  { type: "number", required: false, description: "Inclusive upper bound for int/float." },
+              min:                  { type: "number", required: false, description: "Inclusive lower bound for int/float (valid range edge)." },
+              max:                  { type: "number", required: false, description: "Inclusive upper bound for int/float (valid range edge)." },
               min_length:           { type: "number", required: false, description: "Inclusive minimum length for str." },
               max_length:           { type: "number", required: false, description: "Inclusive maximum length for str." },
-              decision_boundaries:  { type: "array",  required: false, items: { type: "number" }, description: "int/float only — values at or within ±1 of these are classified as Boundary." },
-              boundary_values:      { type: "array",  required: false, items: { type: "string" }, description: "str only — literal values to flag as Boundary (e.g. \"\" for empty string)." }
+              decision_boundaries:  { type: "array",  required: false, items: { type: "number" }, description: "int/float only — values within ±1 of these are also classified as Boundary." }
             }
           }
         },
         rows: {
           type: "array", required: true,
-          description: "One row per test case. Cells listed in `prefilled` are read-only with the teacher's value shown; the rest are editable by the student.",
+          description: "One row per test case. Always provide the expected_output (required), plus EXACTLY ONE of the test data (all input cells) or the test_type — leave the other one blank/empty, and that becomes what the student works out. A cell left empty is the student's to fill; a non-empty cell is shown to them. Expected output is shown as context (not graded — we don't run code). For an `invalid` row to be meaningful the `code` must validate its input.",
           items: {
             type: "object",
             shape: {
-              values:    { type: "object", required: true, description: "Map of column_id -> string. Special column ids: `output` (Expected output) and `test_type` (one of 'normal', 'boundary', 'erroneous')." },
-              prefilled: { type: "array",  required: false, items: { type: "string" }, description: "Column ids whose values are shown read-only to the student." }
+              values: { type: "object", required: true, description: "Map of column_id -> string. Special keys: `test_type` (one of 'normal','boundary','invalid','erroneous', or '' for the student to fill) and `expected_output` (shown as context). Leave an input or test_type empty to make it the student's blank." }
             }
           }
         }
       },
       example: {
-        code: "def is_adult(age):\n    return age >= 18\n",
-        function_name: "is_adult",
+        code: "def check_age(age):\n    if age < 0 or age > 120:\n        return \"NOT VALID\"\n    return \"VALID\"\n",
+        function_name: "check_age",
+        output_type: "string",
         input_columns: [
-          { id: "age", label: "age", type: "int", min: 0, max: 120, decision_boundaries: [18] }
+          { id: "age", label: "age", type: "int", min: 0, max: 120 }
         ],
         rows: [
-          { values: { age: "17", output: "False", test_type: "boundary" }, prefilled: ["age", "output"] },
-          { values: { age: "",   output: "",      test_type: "" },          prefilled: [] }
+          { values: { age: "",  test_type: "boundary",  expected_output: "VALID" } },
+          { values: { age: "",  test_type: "invalid",   expected_output: "NOT VALID" } },
+          { values: { age: "30", test_type: "",         expected_output: "VALID" } }
         ]
       }
     },

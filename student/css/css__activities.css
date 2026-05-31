@@ -899,12 +899,13 @@
   left: 50%;
   transform: translate(-50%, -50%);
   /* Perfectly round, sized for a tap target (28px) but visually
-     compact. Uses the accent colour so it reads as an action. */
+     compact. Uses a darker shade of the code-block background (rather
+     than the navy accent) so it reads as a subtle inline control. */
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: var(--accent);
-  color: var(--accent-fg, #FFFFFF);
+  background: var(--border-strong);
+  color: #FFFFFF;
   border: 2px solid var(--panel);
   display: flex;
   align-items: center;
@@ -920,11 +921,14 @@
      pop in jarringly. */
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.12s ease, transform 0.12s ease;
+  transition: opacity 0.12s ease, transform 0.12s ease, background-color 0.12s ease;
   z-index: 5;
 }
-.stb-add-plus-top    { top: 0; }
-.stb-add-plus-bottom { top: 100%; }
+/* The two circles straddle the gap BETWEEN lines. `+top` centres on the
+   block's top edge, `+bottom` on the bottom edge. A small upward nudge
+   sits them visually in the middle of the inter-line gap. */
+.stb-add-plus-top    { top: -3px; }
+.stb-add-plus-bottom { top: calc(100% - 3px); }
 
 /* Hovering or focusing the block reveals BOTH circles for that
    block — top and bottom. Hovering a circle directly also keeps it
@@ -941,7 +945,20 @@
   /* A subtle lift on direct hover signals "this exact circle is
      active" when both are visible. */
   transform: translate(-50%, -50%) scale(1.1);
+  background: var(--muted);
   outline: none;
+}
+/* High-contrast theme: border-strong is bright yellow, so use the accent
+   border + dark glyph instead of white-on-yellow. */
+[data-theme="hc"] .stb-add-plus {
+  background: var(--bg);
+  color: var(--accent);
+  border: 2px solid var(--accent);
+}
+[data-theme="hc"] .stb-add-plus:hover,
+[data-theme="hc"] .stb-add-plus:focus-visible {
+  background: var(--accent);
+  color: var(--bg);
 }
 
 /* The inserted line — visually distinct (neutral, editing state) so the
@@ -1169,10 +1186,49 @@
   padding: 4px 6px;
 }
 .testing-table .testing-type {
-  min-width: 110px;
+  min-width: 130px;
 }
+/* Cells the student must fill get a subtle tinted background + accent
+   left edge so it's obvious which boxes are theirs to complete. */
+.testing-table td.testing-fill {
+  background: color-mix(in srgb, var(--accent) 9%, var(--panel));
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.testing-table td.testing-fill input,
+.testing-table td.testing-fill select { width: 100%; box-sizing: border-box; }
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .testing-table td.testing-fill { background: rgba(45,91,166,0.08); }
+}
+[data-theme="hc"] .testing-table td.testing-fill {
+  background: var(--bg);
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+/* Expected output renders as preformatted text so multi-line program
+   output (e.g. several printed lines) shows correctly rather than running
+   together on one line. */
+.testing-table .testing-output {
+  margin: 0;
+  padding: 4px 6px;
+  font-family: var(--code-font, ui-monospace, monospace);
+  font-size: 0.92em;
+  white-space: pre-wrap;
+  text-align: left;
+}
+.testing-table .testing-out-empty { color: var(--muted); }
 .testing-table .cell-ok { background: rgba(46, 139, 87, 0.15); }
 .testing-table .cell-bad { background: rgba(177, 42, 56, 0.15); }
+/* A short legend above the table telling the student to complete the
+   tinted cells. */
+.testing-fill-note {
+  margin: 8px 0 0; font-size: 0.9em; color: var(--muted);
+  display: flex; align-items: center; gap: 8px;
+}
+.testing-fill-note .swatch {
+  display: inline-block; width: 14px; height: 14px; border-radius: 3px;
+  background: color-mix(in srgb, var(--accent) 9%, var(--panel));
+  box-shadow: inset 3px 0 0 var(--accent);
+  border: 1px solid var(--border);
+}
 
 /* --- follow-up reflection --- */
 .activity-followup {

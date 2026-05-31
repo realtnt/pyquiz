@@ -565,10 +565,20 @@
 }
 .edit-json-btn:hover { border-color: var(--accent); color: var(--accent); }
 
-/* Validation section pinned at the bottom of the properties pane, with a
+/* Validation section pinned at the bottom of the properties pane (a direct
+   child of .properties-pane, after the scrolling .properties-body), with a
    traffic-light status dot on its summary: green = clean, amber =
-   warnings only, red = errors. */
+   warnings only, red = errors. Mirrors the student tool's Help section. */
 .validation-section { margin-top: 4px; }
+.properties-pane > .validation-section {
+  flex-shrink: 0;
+  margin-top: 0;
+  border-top: 1px solid var(--border);
+  background: var(--panel-2);
+  max-height: 50%;
+  overflow-y: auto;
+  padding: 0 12px;
+}
 .validation-section .form-section-summary { gap: 8px; }
 .validation-dot {
   width: 10px; height: 10px; border-radius: 50%;
@@ -913,6 +923,20 @@
 .le-test-table td { padding: 3px 4px; }
 .le-test-studentcell { background: color-mix(in srgb, var(--accent) 9%, var(--panel)); }
 @supports not (background: color-mix(in srgb, red, blue)) { .le-test-studentcell { background: #EEF4FC; } }
+/* A test case missing too much info (fewer than 2 of 3 pieces) is flagged
+   red, with an explanatory sub-row. */
+.le-test-table tr.le-test-rowbad td { background: #FCE4E6; }
+.le-test-table tr.le-test-rowbad td input,
+.le-test-table tr.le-test-rowbad td select { border-color: var(--bad); }
+.le-test-rowwarn td {
+  background: #FCE4E6; color: var(--bad);
+  font-size: 0.8em; padding: 2px 8px 6px !important; border-top: 0;
+}
+.le-test-instr { margin: 4px 0 0; padding-left: 18px; }
+.le-test-instr li { margin: 2px 0; }
+[data-theme="dark"] .le-test-table tr.le-test-rowbad td,
+[data-theme="dark"] .le-test-rowwarn td { background: #5A1F26; }
+[data-theme="dark"] .le-test-rowwarn td { color: #F6CDD2; }
 
 /* Cloze per-blank cards (no-bank mode). */
 .le-blank-card {
@@ -1571,10 +1595,50 @@ textarea.json-edit {
   padding: 4px 6px;
 }
 .testing-table .testing-type {
-  min-width: 110px;
+  min-width: 130px;
 }
+/* Cells the student must fill get a subtle tinted background + accent
+   left edge so it's obvious which boxes are theirs to complete. */
+.testing-table td.testing-fill {
+  background: color-mix(in srgb, var(--accent) 9%, var(--panel));
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.testing-table td.testing-fill input,
+.testing-table td.testing-fill select { width: 100%; box-sizing: border-box; }
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .testing-table td.testing-fill { background: rgba(45,91,166,0.08); }
+}
+[data-theme="hc"] .testing-table td.testing-fill {
+  background: var(--bg);
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+/* Expected output renders as preformatted text so multi-line program
+   output (e.g. several printed lines) shows correctly rather than running
+   together on one line. */
+.testing-table .testing-output {
+  margin: 0;
+  padding: 4px 6px;
+  font-family: var(--code-font, ui-monospace, monospace);
+  font-size: 0.92em;
+  white-space: pre-wrap;
+  text-align: left;
+}
+.testing-table .testing-out-empty { color: var(--muted); }
 .testing-table .cell-ok { background: rgba(46, 139, 87, 0.15); }
 .testing-table .cell-bad { background: rgba(177, 42, 56, 0.15); }
+/* A short legend above the table telling the student to complete the
+   tinted cells. */
+.testing-fill-note {
+  margin: 8px 0 0; font-size: 0.9em; color: var(--muted);
+  display: flex; align-items: center; gap: 8px;
+}
+.testing-fill-note .swatch {
+  display: inline-block; width: 14px; height: 14px; border-radius: 3px;
+  background: color-mix(in srgb, var(--accent) 9%, var(--panel));
+  box-shadow: inset 3px 0 0 var(--accent);
+  border: 1px solid var(--border);
+}
+
 
 /* --- follow-up reflection --- */
 .activity-followup {

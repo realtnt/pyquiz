@@ -363,6 +363,11 @@
       }
     });
     if (!rows.length) issues.push({ level: "warning", path: base + ".payload.rows", message: "At least one test case is recommended." });
+    function teacherOut(v) {
+      if (v && v.expected_output != null && v.expected_output !== "") return v.expected_output;
+      if (v && v.output != null && v.output !== "") return v.output;
+      return "";
+    }
     rows.forEach((r, i) => {
       const rp = base + ".payload.rows[" + i + "]";
       if (!r || typeof r !== "object") {
@@ -370,22 +375,23 @@
         return;
       }
       const v = r.values || {};
-      const pre = Array.isArray(r.prefilled) ? r.prefilled : [];
-      // Anchor warning: if neither any input nor test_type is prefilled,
-      // the row has no fixed expectation and almost anything passes.
-      const anyInputPre = cols.some(c => pre.indexOf(c.id) >= 0);
-      const typePre = pre.indexOf("test_type") >= 0;
-      if (!anyInputPre && !typePre) {
-        issues.push({ level: "warning", path: rp + ".prefilled", message: "Row has no anchor — neither an input nor the test type is prefilled, so any consistent student answer is accepted." });
-      }
-      pre.forEach(pid => {
-        if (pid !== "output" && pid !== "test_type" && !ids.has(pid)) {
-          issues.push({ level: "error", path: rp + ".prefilled", message: "Prefilled column id '" + pid + "' is not declared in input_columns." });
-        }
-      });
       const tt = v.test_type;
-      if (tt && ["normal", "boundary", "erroneous"].indexOf(tt) < 0) {
-        issues.push({ level: "error", path: rp + ".values.test_type", message: "test_type must be one of normal, boundary, erroneous (or empty for student to fill)." });
+      if (tt && ["normal", "boundary", "invalid", "erroneous"].indexOf(tt) < 0) {
+        issues.push({ level: "error", path: rp + ".values.test_type", message: "test_type must be one of normal, boundary, invalid, erroneous (or empty for the student to fill)." });
+      }
+      const dataSet = cols.length > 0 && cols.every(c => v[c.id] != null && String(v[c.id]) !== "");
+      const typeSet = (tt || "") !== "";
+      const outSet  = teacherOut(v) !== "";
+      // Expected output is REQUIRED; then exactly one of {input, type} is
+      // given and the other is left blank for the student.
+      if (!outSet) {
+        issues.push({ level: "error", path: rp + ".values.expected_output", message: "Expected output is required for every test case." });
+      }
+      const otherCount = (dataSet ? 1 : 0) + (typeSet ? 1 : 0);
+      if (otherCount === 0) {
+        issues.push({ level: "error", path: rp + ".values", message: "Fill in either the Input or the Type of test — leave the other blank for the student to work out." });
+      } else if (otherCount === 2) {
+        issues.push({ level: "error", path: rp + ".values", message: "Leave one of the Input or Type of test blank for the student to work out." });
       }
     });
   };
