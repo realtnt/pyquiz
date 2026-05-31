@@ -1,6 +1,6 @@
 {
   "schema": "pyquiz-packs@1",
-  "generated": "2026-05-30",
+  "generated": "2026-05-31",
   "packs": [
     {
       "id": "builtin-loops-intro",

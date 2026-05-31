@@ -232,7 +232,10 @@
 .trace-table-wrap { overflow: auto; }
 .trace-table {
   border-collapse: collapse;
-  margin-top: 10px;
+  /* Centre the table when it's narrower than the pane; margin:auto on a
+     block-level table centres it without clipping the left edge when it's
+     wide enough to scroll. */
+  margin: 10px auto 0;
   background: var(--panel);
 }
 .trace-table th, .trace-table td {
@@ -941,25 +944,27 @@
   outline: none;
 }
 
-/* The inserted line — visually distinct (light-green tint) so the
-   student can see exactly what they've added. */
+/* The inserted line — visually distinct (neutral, editing state) so the
+   student can see what they've added. It turns green/red only once the
+   activity is marked, via the .mark-ok / .mark-bad classes (same as the
+   spot-the-bug / modify in-place fix lines). */
 .stb-line-inserted {
-  background: #E8F5E9;
-  border-left: 3px solid var(--ok);
+  background: var(--panel-2);
+  border-left: 3px solid var(--accent);
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 4px 8px;
 }
 .stb-ln-new {
-  color: var(--ok);
+  color: var(--accent);
   font-weight: 600;
 }
 .stb-add-input {
   flex: 1 1 0;
   font-family: var(--font-mono);
   background: transparent;
-  border: 1px solid var(--ok);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius);
   padding: 4px 6px;
   color: var(--fg);
@@ -1082,8 +1087,8 @@
 
 /* Dark / HC theme adjustments. */
 [data-theme="dark"] .stb-line-inserted {
-  background: #1F3A28;
-  border-left-color: var(--ok);
+  background: var(--panel-2);
+  border-left-color: var(--accent);
 }
 [data-theme="dark"] .stb-remove-bin {
   background: #3D1F23;
@@ -1094,9 +1099,9 @@
 }
 [data-theme="hc"] .stb-line-inserted {
   background: var(--bg);
-  border-left: 3px solid var(--ok);
-  border-top: 1px solid var(--ok);
-  border-bottom: 1px solid var(--ok);
+  border-left: 3px solid var(--accent);
+  border-top: 1px solid var(--accent);
+  border-bottom: 1px solid var(--accent);
 }
 [data-theme="hc"] .stb-add-plus {
   background: var(--bg);
@@ -1194,13 +1199,20 @@
 
 /* --- flowchart activity --- */
 .flowchart-activity {
-  overflow-x: auto;
+  overflow: auto;
   padding: 8px 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
+.flowchart-activity::-webkit-scrollbar { width: 0; height: 0; display: none; }
+/* When the chart is bigger than the viewport the student drags the
+   background to move around (grab-to-pan) instead of using scrollbars. */
+.flowchart-activity.fc-pannable { cursor: grab; }
+.flowchart-activity.fc-pannable.fc-panning { cursor: grabbing; }
 .flowchart-svg {
-  /* Natural size — the parent .flowchart-activity has overflow-x:auto so
-     wider charts get a horizontal scrollbar instead of shrinking. This
-     keeps the blank inputs comfortably tappable on narrow screens. */
+  /* Natural size — the activity pans (grab-to-drag) when the chart is wider
+     or taller than the viewport, so blanks stay comfortably tappable
+     without shrinking the chart. */
   display: block;
 }
 .fc-shape {

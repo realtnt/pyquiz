@@ -20,7 +20,18 @@
   let currentController = null;
   let currentPlayAction = null;
   let currentRefreshPlay = null;
+  let currentResetBtn = null;
   let currentConfidencePicker = () => null;
+  /* Disable the per-activity reset button (anti-cheat). Called both at render
+     time for already-terminal activities and live from doCheck the moment a
+     correct answer or final wrong attempt lands. */
+  function lockReset() {
+    const r = currentResetBtn;
+    if (!r) return;
+    r.disabled = true;
+    r.setAttribute("aria-disabled", "true");
+    r.setAttribute("title", "Locked — this activity has been answered. Clear progress in Settings if you need to start over.");
+  }
   /* The current pack's attempts cap. Returns Infinity when unlimited.
      Read in doCheck and in refreshPlayButton. */
   function attemptsCap() {
@@ -678,7 +689,11 @@
       isChallenge && ap.status === "not_started" ? challengeLetter :
       ap.status === "revealed"    ? "i" :
       String(i + 1);
-    const status = DOM.el("span", { class: "status " + ap.status, title: S[ap.status] || ap.status }, statusContent);
+    const status = DOM.el("span", {
+      class: "status " + ap.status +
+        (isChallenge && (ap.status === "not_started" || ap.status === "revealed") ? " status-challenge" : ""),
+      title: S[ap.status] || ap.status
+    }, statusContent);
     /* Sequential lock indicator: items past the first non-terminal one
        are locked. Marker is added later once we know the position. */
     // Small abbreviated type pill — uses the activity-type's default
@@ -867,6 +882,16 @@
     reset.setAttribute("aria-label", S.reset);
     reset.setAttribute("title", S.reset);
     reset.classList.add("icon-only");
+    currentResetBtn = reset;
+    /* Lock the reset button once the outcome is terminal — a correct answer
+       or running out of attempts (e.g. a second wrong answer). A single wrong
+       answer with attempts still remaining keeps reset available so the
+       student can clear and retry. Progress can always be cleared from
+       Settings. lockReset() is also called live from doCheck so the button
+       disables the instant the outcome happens, not only on re-entry. */
+    if (ap.status === "correct" || ap.status === "failed") {
+      lockReset();
+    }
 
     // Single Play button: first press = check; if last check was correct
     // the next press navigates to the next activity. This replaces the
@@ -1174,6 +1199,11 @@
       ap.status = "incorrect";
     }
     ap.last_updated = nowISO();
+    // Anti-cheat: lock the reset button the instant the outcome is terminal —
+    // a correct answer, or attempts exhausted (e.g. a second wrong answer).
+    if (ap.status === "correct" || ap.status === "failed") {
+      try { lockReset(); } catch (e) {}
+    }
     // Record confidence picked for this attempt (if any). Stored as a
     // small history so teachers can see trends across attempts.
     try {

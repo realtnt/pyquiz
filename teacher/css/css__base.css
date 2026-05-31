@@ -1082,41 +1082,51 @@ body {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
-/* Inline radio group for 2-3-option settings (theme, motion, font…). */
+/* Segmented control for 2-3-option settings (theme, motion, font…). The
+   options sit flush against each other as connected rectangles — no radio
+   dots, no gaps — so they read as a single switch. Only the outer corners
+   of the group are rounded. */
 .radio-group {
-  display: flex; gap: 8px; flex-wrap: wrap;
+  display: inline-flex; flex-wrap: wrap;
   flex: 0 1 auto;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 .radio-option {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 10px;
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 6px 14px;
+  border: 0;
+  border-left: 1px solid var(--border-strong);
+  border-radius: 0;
   background: var(--panel);
   cursor: pointer;
   font-size: 0.88em;
   user-select: none;
-  transition: background-color 0.12s ease, border-color 0.12s ease;
+  transition: background-color 0.12s ease, color 0.12s ease;
   white-space: nowrap;
 }
+.radio-option:first-child { border-left: 0; }
 .radio-option input[type="radio"] {
-  margin: 0;
-  accent-color: var(--accent);
+  position: absolute;
+  opacity: 0;
+  width: 0; height: 0;
+  margin: 0; pointer-events: none;
 }
 .radio-option:hover {
   background: var(--panel-2);
-  border-color: var(--accent);
 }
 .radio-option:has(input:checked) {
-  background: color-mix(in srgb, var(--accent) 16%, var(--panel));
-  border-color: var(--accent);
-  color: var(--fg);
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-weight: 600;
 }
 @supports not (selector(:has(*))) {
   .radio-option input[type="radio"]:checked + span { font-weight: 600; }
 }
 [data-theme="dark"] .radio-option:has(input:checked) {
-  background: #1F3A5E;
+  background: var(--accent);
+  color: var(--accent-fg);
 }
 
 .modal .field-row select,

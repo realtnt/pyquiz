@@ -226,9 +226,20 @@
       const givenAfter = response.inserted.after;
       const positionOk = expectedAfter == null || expectedAfter === givenAfter;
       const givenContent = String(response.inserted.content || "");
+      /* Unlike an in-place fix (where the line sits in a fixed slot and we
+         tolerate leading whitespace), an ADDED line's indentation is part of
+         the answer — it decides whether the line lands inside or outside the
+         loop. So compare WITH indentation: leading spaces must match, then the
+         code body is normalised. Tabs are treated as the equivalent spaces. */
+      function leadWs(s) {
+        const m = String(s).match(/^[ \t]*/);
+        return (m ? m[0] : "").replace(/\t/g, "    ");
+      }
+      function body(s) { return N.pythonCode(String(s).replace(/^[ \t]+/, "")); }
+      const givenIndent = leadWs(givenContent);
+      const givenBody = body(givenContent);
       const contentOk = accepted.some(function (a) {
-        return N.pythonCode(String(a || "").replace(/^\s+/, "")) ===
-               N.pythonCode(givenContent.replace(/^\s+/, ""));
+        return leadWs(a) === givenIndent && body(a) === givenBody;
       });
       const ok = positionOk && contentOk;
       return result(ok ? "correct" : "incorrect", ok ? 1 : 0,

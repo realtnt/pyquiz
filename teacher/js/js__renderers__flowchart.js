@@ -922,6 +922,44 @@
     root.appendChild(svg);
     host.appendChild(root);
 
+    /* Grab-to-pan: when the chart is larger than its viewport, dragging the
+       empty background scrolls it (scrollbars are hidden via CSS). Panning is
+       suppressed when the pointer is on a blank input or a clickable shape so
+       answering the activity still works. The .fc-pannable class (which shows
+       the grab cursor) is only added when there is actually something to pan. */
+    (function () {
+      function updatePannable() {
+        const can = root.scrollWidth > root.clientWidth + 1 || root.scrollHeight > root.clientHeight + 1;
+        root.classList.toggle("fc-pannable", can);
+      }
+      // Re-check after layout settles (fonts, wrapping) and on resize.
+      if (typeof requestAnimationFrame === "function") requestAnimationFrame(updatePannable);
+      setTimeout(updatePannable, 60);
+      if (typeof ResizeObserver === "function") {
+        try { new ResizeObserver(updatePannable).observe(root); } catch (e) {}
+      }
+      let pan = null;
+      root.addEventListener("mousedown", function (ev) {
+        if (ev.button !== 0) return;
+        if (!root.classList.contains("fc-pannable")) return;
+        // Don't pan when starting on an input or other interactive control.
+        if (ev.target.closest && ev.target.closest("input, textarea, select, button, a, [contenteditable]")) return;
+        pan = { x: ev.clientX, y: ev.clientY, sl: root.scrollLeft, st: root.scrollTop };
+        root.classList.add("fc-panning");
+        ev.preventDefault();
+      });
+      window.addEventListener("mousemove", function (ev) {
+        if (!pan) return;
+        root.scrollLeft = pan.sl - (ev.clientX - pan.x);
+        root.scrollTop  = pan.st - (ev.clientY - pan.y);
+      });
+      window.addEventListener("mouseup", function () {
+        if (!pan) return;
+        pan = null;
+        root.classList.remove("fc-panning");
+      });
+    })();
+
     // When a label is truncated, clicking the shape pops the full text in an
     // overlay above everything else. A second click (anywhere) dismisses it.
     let revealOverlay = null;

@@ -267,7 +267,7 @@ THE 9 ACTIVITY TYPES (payload shapes + a real example each)
    Same payload shape as spot_the_bug, plus a third constraint:
    - `in_place`: rewrite one line.
    - `add_line`: insert a new line; `bugs[0].line` is the line AFTER which it goes, `fix` is the new line (keep its indentation).
-   - `rewrite`: rewrite the highlighted line to the new spec.
+   - `rewrite`: the student finds the line that needs changing, clicks it and edits it in place. No line is pre-highlighted, so the instructions/behaviour must make clear WHICH line and WHAT the new behaviour is — never say "the highlighted line".
    `expected_behaviour` describes the NEW desired behaviour; `actual_behaviour` the current one.
    Example (add_line):
    { "type": "modify", "payload": {
