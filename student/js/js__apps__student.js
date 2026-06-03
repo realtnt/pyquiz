@@ -101,7 +101,7 @@
     // layout collapses both panes; removeWelcomeMode() restores them on
     // the first pack load.
     const layout = document.getElementById("layout");
-    layout.classList.add("welcome-mode");
+    if (layout) layout.classList.add("welcome-mode");
     /* Also tag the body so CSS can hide the topbar burgers — those
        toggle the side panes, which are collapsed in welcome mode, so
        the buttons would be no-ops. */
@@ -111,7 +111,7 @@
 
     // Hero
     const hero = DOM.el("section", { class: "welcome-hero" });
-    hero.appendChild(DOM.el("div", { class: "welcome-logo", "aria-hidden": "true" }, "{ }"));
+    hero.appendChild(DOM.el("div", { class: "welcome-logo", "aria-hidden": "true" }, "P"));
     hero.appendChild(DOM.el("h1", { class: "welcome-title" }, "PyQuiz"));
     hero.appendChild(DOM.el("p", { class: "welcome-tagline" },
       "A Python practice tool for KS3 and KS4 computing teachers. Build your own packs of bite-sized activities, structured the way you teach — and let your students work through them at their own pace, with instant feedback."));
@@ -435,7 +435,7 @@
     // Leaving welcome mode — restore both side panes to whatever the
     // student's saved layout preference was. Without this, packs would
     // load with both panes still hidden.
-    document.getElementById("layout").classList.remove("welcome-mode");
+    var _lay = document.getElementById("layout"); if (_lay) _lay.classList.remove("welcome-mode");
     document.body.classList.remove("welcome-mode");
     pack = ingested.pack;
     document.getElementById("pack-title").textContent = pack.title || "Untitled pack";
@@ -608,6 +608,93 @@
       fillEl.style.width = pct + "%";
       fillEl.classList.toggle("complete", attempted === total && total > 0);
     }
+    try { renderCarousel(); } catch (e) {}
+  }
+
+  /* ---- Carousel (top activity tape) ---- */
+  function renderCarousel() {
+    const tape = document.getElementById("tape");
+    if (!tape || !pack) return;
+    const acts = pack.activities || [];
+    // Build the tokens ONCE per pack so navigation only toggles classes —
+    // that lets the CSS transitions animate (slide, turn purple, expand)
+    // instead of re-creating elements in their final state each time.
+    if (tape.dataset.packId !== pack.id || tape.childElementCount !== acts.length) {
+      tape.dataset.packId = pack.id;
+      tape.innerHTML = "";
+      acts.forEach((a, i) => {
+        const tok = DOM.el("button", {
+          class: "sk-tok", type: "button", role: "tab", "data-id": a.id,
+          title: (i + 1) + ". " + (a.title || a.type)
+        });
+        tok.appendChild(DOM.el("span", { class: "num", "aria-hidden": "true" }, String(i + 1)));
+        tok.appendChild(DOM.el("span", { class: "lab" }, a.title || (PyQuiz.Constants.TYPE_LABELS[a.type] || a.type)));
+        tok.addEventListener("click", () => selectActivity(a.id));
+        tape.appendChild(tok);
+      });
+    }
+    // Update current / done state on the existing tokens (animates).
+    acts.forEach((a, i) => {
+      const ap = progress.activities[a.id] || {};
+      const tok = tape.children[i];
+      if (!tok) return;
+      const isCur = a.id === currentId;
+      tok.classList.toggle("current", isCur);
+      tok.classList.toggle("done", ap.status === "correct");
+      tok.classList.toggle("failed", ap.status === "failed");
+      tok.setAttribute("aria-selected", isCur ? "true" : "false");
+    });
+    // Centre now, and again once the current token has finished expanding
+    // so the final (wider) token lands dead-centre.
+    requestAnimationFrame(centreCarousel);
+    setTimeout(centreCarousel, 340);
+    const curIdx = acts.findIndex(a => a.id === currentId);
+    const prev = document.getElementById("nav-prev"), next = document.getElementById("nav-next");
+    if (prev) prev.disabled = curIdx <= 0;
+    if (next) next.disabled = curIdx < 0 || curIdx >= acts.length - 1;
+    try { renderScoreBar(); } catch (e) {}
+  }
+
+  function centreCarousel() {
+    const tape = document.getElementById("tape");
+    const dock = document.getElementById("dock");
+    if (!tape || !dock) return;
+    const cur = tape.querySelector(".sk-tok.current");
+    if (!cur) { tape.style.transform = "translateX(0)"; return; }
+    const x = dock.clientWidth / 2 - (cur.offsetLeft + cur.offsetWidth / 2);
+    tape.style.transform = "translateX(" + x + "px)";
+  }
+
+  /* Thin segmented score bar in the drawer: one segment per activity,
+     green = correct, red = failed (out of attempts), grey = not answered,
+     with "correct / total" at the end. */
+  function renderScoreBar() {
+    const track = document.getElementById("sk-score-track");
+    const num = document.getElementById("sk-score-num");
+    if (!track || !pack) return;
+    const acts = pack.activities || [];
+    if (track.childElementCount !== acts.length) {
+      track.innerHTML = "";
+      acts.forEach(() => track.appendChild(DOM.el("i")));
+    }
+    let correct = 0;
+    acts.forEach((a, i) => {
+      const ap = progress.activities[a.id] || {};
+      const seg = track.children[i];
+      if (!seg) return;
+      seg.classList.toggle("ok", ap.status === "correct");
+      seg.classList.toggle("bad", ap.status === "failed");
+      if (ap.status === "correct") correct++;
+    });
+    if (num) num.textContent = correct + "/" + acts.length;
+  }
+
+  function carouselStep(dir) {
+    if (!pack) return;
+    const acts = pack.activities || [];
+    const i = acts.findIndex(a => a.id === currentId);
+    const j = Math.max(0, Math.min(acts.length - 1, (i < 0 ? 0 : i) + dir));
+    if (acts[j]) selectActivity(acts[j].id);
   }
 
   function makeGroup(sec, items, opts) {
@@ -757,6 +844,12 @@
     currentId = id;
     progress.current_activity_id = id;
     revealedHints = 0;
+    // New activity always opens on the Brief tab.
+    _activeDrawerTab = "brief";
+    // Clear any open hint/solution post-it notes from the previous activity.
+    try { const nl = document.getElementById("notes"); if (nl) nl.innerHTML = ""; } catch (e) {}
+    try { _closeSolutionNote && _closeSolutionNote(); } catch (e) {}
+    try { const hb = document.getElementById("hint-btn"); if (hb) hb.classList.remove("on"); } catch (e) {}
     /* Make sure the section containing this activity is open in the task
        list. In focused mode, opening it closes the others; in free mode
        the others are left as the student had them. This is what makes
@@ -1017,22 +1110,14 @@
     header.appendChild(actions);
     wrap.appendChild(header);
 
-    const meta = DOM.el("div", { class: "activity-meta" });
-    if (act.estimated_time_seconds) meta.appendChild(DOM.el("span", null, "~" + Math.round(act.estimated_time_seconds / 60) + " min"));
-    if (act.timing) meta.appendChild(DOM.el("span", null, "Timed: " + act.timing.limit_seconds + "s"));
-    if (meta.children.length) wrap.appendChild(meta);
+    /* Title, difficulty stars, timing and instructions are intentionally
+       NOT shown in the work area — the drawer Brief pane carries the
+       instructions, and the header is kept only to host the Reset/Play
+       proxies the bottom bar drives. */
 
-    if (act.context) wrap.appendChild(DOM.el("div", { class: "activity-context" }, act.context));
-    if (act.instructions) wrap.appendChild(DOM.el("p", { class: "activity-instructions" }, act.instructions));
-
-    /* Standard I/O panel — Input + Output rows with Expected (and
-       Current for bug/modify) columns. Pulled in for every activity
-       type, but the helper returns null when nothing is defined so the
-       block doesn't clutter activities that have no runtime I/O. */
-    if (Renderers.ioPanel) {
-      const io = Renderers.ioPanel.build(act);
-      if (io) wrap.appendChild(io);
-    }
+    /* Standard I/O panel (Expected / Current behaviour, Input, Output) is
+       NOT shown in the work area any more — it is surfaced in the drawer
+       Brief pane instead (see renderSidePanel). */
 
     const body = DOM.el("div", { class: "activity-body" });
     wrap.appendChild(body);
@@ -1115,16 +1200,19 @@
     }
 
     /* If this activity is already terminal (correct or out of attempts),
-       lock the body so it can't be edited further. For failed flowcharts
-       we also autofill the canonical answers (see fillFlowchartSolution). */
-    if (ap.status === "correct" || ap.status === "failed") {
-      if (act.type === "flowchart" && ap.status === "failed") {
-        try { fillFlowchartSolution(act); } catch (e) {}
-      }
-      lockActivityBody(true);
+       autofill a failed flowchart's canonical answers before mounting. */
+    if (ap.status === "failed" && act.type === "flowchart") {
+      try { fillFlowchartSolution(act); } catch (e) {}
     }
 
     main.appendChild(wrap);
+    try { decorateCodeWindows(main, act); } catch (e) {}
+    /* Lock the body AFTER it is in the DOM (lockActivityBody queries the
+       document). Once correct or out of attempts, the activity can't be
+       edited again. */
+    if (ap.status === "correct" || ap.status === "failed") {
+      lockActivityBody(true);
+    }
     startTimer(act);
 
     // Auto-focus the first input/control so the student can start
@@ -1237,6 +1325,7 @@
         : " Try again.");
     }
     A11y.announceAssertive(announce);
+    _justChecked = true;
     renderSidePanel(act);
     /* On a terminal outcome, lock the body. For a failed flowchart, first
        autofill the blanks with the correct answers, marked orange. */
@@ -1481,6 +1570,20 @@
     body.querySelectorAll("[contenteditable]").forEach(el => {
       el.setAttribute("contenteditable", lock ? "false" : "true");
     });
+    // Clickable non-form elements (parsons blocks, cloze chips, spot-the-bug
+    // lines, MC options). pointer-events:none (CSS) stops the mouse; remove
+    // them from the tab order so keyboard can't activate them either.
+    body.querySelectorAll('[role="button"], .chip, .parsons-block, .stb-line-block, .po-option').forEach(el => {
+      if (lock) {
+        if (!el.hasAttribute("data-prev-tabindex")) el.setAttribute("data-prev-tabindex", el.getAttribute("tabindex") || "");
+        el.setAttribute("tabindex", "-1");
+        el.setAttribute("aria-disabled", "true");
+      } else {
+        const prev = el.getAttribute("data-prev-tabindex");
+        if (prev !== null) { if (prev === "") el.removeAttribute("tabindex"); else el.setAttribute("tabindex", prev); el.removeAttribute("data-prev-tabindex"); }
+        el.removeAttribute("aria-disabled");
+      }
+    });
   }
 
 
@@ -1503,180 +1606,172 @@
     });
   }
 
+  /* ---- Drawer: Brief + Feedback panes (retrofit shell) ---- */
   function renderSidePanel(act) {
-    const sp = document.getElementById("side-panel-body") || document.getElementById("side-panel");
-    // Preserve the resize handle (added once by setupPaneResize) while
-    // clearing the rest of the panel's content.
-    const handle = sp.querySelector(".pane-resize");
-    sp.innerHTML = "";
-    if (handle) sp.appendChild(handle);
-    // The side panel is laid out as a vertical flex column with TWO
-    // visible regions:
-    //   1. .feedback-stack (top, flex:1) — feedback, hints, solution,
-    //      Python runner. Scrolls internally if its content overflows.
-    //   2. .help-section (bottom, flex-shrink:0) — always pinned to the
-    //      bottom edge of the side panel, regardless of how much
-    //      content is above it.
-    // Everything except the resize handle and the help-section is
-    // appended to feedbackStack instead of sp directly.
-    const feedbackStack = DOM.el("div", { class: "feedback-stack" });
-    sp.appendChild(feedbackStack);
-    const fbSec = DOM.el("section");
-    fbSec.appendChild(DOM.h3(S.feedback));
-    const fbBody = DOM.el("div", { id: "feedback-body", class: "live-region", "aria-live": "polite" });
-    fbSec.appendChild(fbBody);
-    feedbackStack.appendChild(fbSec);
-    const ap = progress.activities[act.id];
-    if (ap && (ap.status === "correct" || ap.status === "incorrect")) {
+    const sp = document.getElementById("side-panel-body");
+    if (!sp) return;
+    const ap = progress.activities[act.id] || {};
+
+    // Tag button shows the activity type.
+    const tag = document.getElementById("tagtext");
+    if (tag) tag.textContent = (PyQuiz.Constants.TYPE_LABELS[act.type] || act.type);
+
+    // Brief pane: instructions + light meta.
+    // Brief pane: instructions only (no "Brief" label or difficulty meta).
+    const brief = DOM.el("div", { class: "sk-pane show", "data-pane": "brief" });
+    const desc = DOM.el("p", { class: "sk-desc" });
+    desc.appendChild(renderInlineMarkup(act.instructions || ""));
+    brief.appendChild(desc);
+    // The Expected / Current behaviour + Input/Output panel now lives here,
+    // beneath the instructions, rather than in the work area.
+    try {
+      if (Renderers.ioPanel) {
+        const io = Renderers.ioPanel.build(act);
+        if (io) brief.appendChild(io);
+      }
+    } catch (e) {}
+
+    // Feedback pane.
+    const fbPane = DOM.el("div", { class: "sk-pane", "data-pane": "fb" });
+    const terminal = (ap.status === "correct" || ap.status === "incorrect" || ap.status === "failed");
+    if (terminal) {
+      const good = ap.status === "correct";
       const fb = act.feedback || {};
-      const text = ap.status === "correct" ? (fb.correct || S.correctDefault) : (fb.incorrect || S.incorrectDefault);
-      const fbBox = DOM.el("div", { class: "feedback " + ap.status });
-      fbBox.appendChild(renderInlineMarkup(text));
-      fbBody.appendChild(fbBox);
-    }
-
-    if (Array.isArray(act.hints) && act.hints.length) {
-      const hsec = DOM.el("section");
-      const heading = DOM.el("div", { class: "section-heading-row" });
-      heading.appendChild(DOM.el("h3", { style: "margin:0" }, "Hints"));
-      const counter = DOM.el("span", { class: "hint-counter" },
-        act.hints.length + (act.hints.length === 1 ? " hint available" : " hints available"));
-      heading.appendChild(counter);
-      hsec.appendChild(heading);
-      const hintHost = DOM.el("div");
-      hsec.appendChild(hintHost);
-      // Migrate a hint from string (legacy) or object to the canonical
-      // { type, text } shape. Unknown / missing type defaults to "nudge".
-      function normaliseHint(h) {
-        if (typeof h === "string") return { type: "nudge", text: h };
-        if (h && typeof h === "object") {
-          const t = ["nudge", "concept", "partial_solution"].indexOf(h.type) >= 0 ? h.type : "nudge";
-          return { type: t, text: String(h.text || "") };
-        }
-        return { type: "nudge", text: "" };
-      }
-      const HINT_META = {
-        nudge:            { icon: "👉", label: "Nudge" },
-        concept:          { icon: "📘", label: "Concept" },
-        partial_solution: { icon: "🔧", label: "Partial solution" }
-      };
-      const btn = DOM.button("💡 " + S.showHint, null);
-      btn.classList.add("hint-btn");
-      btn.addEventListener("click", () => {
-        if (revealedHints >= act.hints.length) return;
-        const h = normaliseHint(act.hints[revealedHints]);
-        const meta = HINT_META[h.type] || HINT_META.nudge;
-        const box = DOM.el("div", { class: "hint hint-" + h.type });
-        const tag = DOM.el("div", { class: "hint-tag" },
-          DOM.el("span", { class: "hint-tag-icon", "aria-hidden": "true" }, meta.icon),
-          DOM.el("span", { class: "hint-tag-label" }, meta.label));
-        box.appendChild(tag);
-        const textBox = DOM.el("div", { class: "hint-text" });
-        textBox.appendChild(renderInlineMarkup(h.text));
-        box.appendChild(textBox);
-        hintHost.appendChild(box);
-        revealedHints++;
-        const left = act.hints.length - revealedHints;
-        counter.textContent = revealedHints + " of " + act.hints.length + " revealed"
-          + (left > 0 ? (" — " + left + " left") : "");
-        if (revealedHints >= act.hints.length) btn.disabled = true;
-      });
-      hsec.appendChild(btn);
-      feedbackStack.appendChild(hsec);
-    }
-
-    const policy = (pack.settings && pack.settings.show_solutions_after) || "submission";
-    const ap2 = progress.activities[act.id];
-    const canReveal = policy === "submission" || (policy === "correct_only" && ap2.status === "correct");
-    /* Failed activities ALWAYS reveal the canonical answer — the student
-       has used their attempts. Independent of show_solutions_after. */
-    if (ap2 && ap2.status === "failed" && policy !== "never") {
-      const failSec = DOM.el("section");
-      failSec.appendChild(DOM.el("div", { class: "section-heading-row" },
-        DOM.el("h3", { style: "margin:0" }, "Out of attempts — here's the answer")));
-      const ans = canonicalAnswerEl(act);
-      if (ans) failSec.appendChild(ans);
-      else failSec.appendChild(DOM.el("p", { class: "solution-text" }, "No solution available for this activity."));
-      feedbackStack.appendChild(failSec);
-    }
-    const hasSolution = act.solution_explanation || (act.type === "starter_challenge" && act.payload && act.payload.model_solution);
-    if (hasSolution && policy !== "never" && canReveal) {
-      const ssec = DOM.el("section");
-      ssec.appendChild(DOM.h3("Solution"));
-      // 3-press reveal: yellow → orange → red → reveals. Makes peeking a
-      // deliberate act rather than an accident, regardless of activity type.
-      const solBox = DOM.el("div", { hidden: "" });
-      if (act.solution_explanation) solBox.appendChild(DOM.el("p", null, act.solution_explanation));
-      if (act.type === "starter_challenge" && act.payload.model_solution) {
-        const pre = DOM.el("pre", { class: "code-block", style: "font-family:var(--font-mono)" });
-        pre.textContent = act.payload.model_solution;
-        solBox.appendChild(pre);
-      }
-
-      let presses = 0;
-      const revealBtn = DOM.button(S.revealSolution, null);
-      revealBtn.classList.add("reveal-btn");
-      const updateBtn = function () {
-        revealBtn.classList.remove("stage-1", "stage-2", "stage-3");
-        if (!solBox.hasAttribute("hidden")) { revealBtn.textContent = "Hide solution"; return; }
-        if (presses === 0) { revealBtn.textContent = S.revealSolution; }
-        else if (presses === 1) { revealBtn.classList.add("stage-1"); revealBtn.textContent = "Sure? Press again."; }
-        else if (presses === 2) { revealBtn.classList.add("stage-2"); revealBtn.textContent = "Really sure? Press once more."; }
-        else { revealBtn.classList.add("stage-3"); }
-      };
-      updateBtn();
-      revealBtn.addEventListener("click", () => {
-        if (solBox.hasAttribute("hidden")) {
-          presses++;
-          if (presses >= 3) {
-            solBox.removeAttribute("hidden");
-            const ap3 = progress.activities[act.id];
-            if (ap3.status !== "correct") ap3.status = "revealed";
-            persistProgress();
-            renderTaskList();
+      let text;
+      if (ap.status === "correct") text = fb.correct || S.correctDefault;
+      else if (ap.status === "failed") text = "Out of attempts — the solution is shown on the activity.";
+      else text = fb.incorrect || S.incorrectDefault;
+      const box = DOM.el("div", { class: "sk-fb" + (good ? "" : " bad") });
+      box.appendChild(DOM.el("span", { class: "ic", "aria-hidden": "true" }, good ? "✓" : "✕"));
+      const txtWrap = DOM.el("span");
+      txtWrap.appendChild(DOM.el("b", null, good ? "Correct" : (ap.status === "failed" ? "Not solved" : "Not quite")));
+      const sub = DOM.el("span", { class: "sub" });
+      sub.appendChild(renderInlineMarkup(text));
+      txtWrap.appendChild(sub);
+      box.appendChild(txtWrap);
+      fbPane.appendChild(box);
+      // On a failed activity, surface the canonical answer here too (the
+      // hold-to-reveal Solution post-it remains available as well).
+      if (ap.status === "failed") {
+        try {
+          const ansEl = canonicalAnswerEl(act);
+          if (ansEl) {
+            fbPane.appendChild(DOM.el("div", { class: "sk-plabel", style: "margin-top:14px" }, "Answer"));
+            fbPane.appendChild(ansEl);
           }
-          updateBtn();
-        } else {
-          solBox.setAttribute("hidden", "");
-          presses = 0;
-          updateBtn();
-        }
-      });
-      ssec.appendChild(revealBtn);
-      ssec.appendChild(solBox);
-      feedbackStack.appendChild(ssec);
+        } catch (e) {}
+      }
+    } else {
+      fbPane.appendChild(DOM.el("p", { class: "sk-desc", style: "color:var(--muted)" },
+        "Press Check to see how you did."));
     }
 
-    // Per-type help — generic tips that apply to every activity of this
-    // type. Sticks to the bottom of the side panel, collapsible via a
-    // disclosure triangle, open by default. The collapsed state persists
-    // across activities so the student's preference is respected.
-    // The tip strings are trusted (PyQuiz.Strings, not from any pack)
-    // so we render them as HTML to support the <kbd> shortcut pills.
-    const tips = S.helpFor ? S.helpFor(act) : ((S.help && S.help[act.type]) || []);
-    if (tips.length) {
-      const helpSec = DOM.el("details", { class: "help-section" });
-      if (!helpCollapsed) helpSec.setAttribute("open", "");
-      const sum = DOM.el("summary");
-      sum.appendChild(DOM.el("span", { class: "help-summary-text" }, "Help"));
-      const counter = DOM.el("span", { class: "help-summary-count" },
-        tips.length + " " + (tips.length === 1 ? "tip" : "tips"));
-      sum.appendChild(counter);
-      helpSec.appendChild(sum);
-      const ul = DOM.el("ul", { class: "help-list" });
-      tips.forEach(t => {
-        const li = DOM.el("li");
-        li.innerHTML = t;
-        ul.appendChild(li);
-      });
-      helpSec.appendChild(ul);
-      helpSec.addEventListener("toggle", function () {
-        helpCollapsed = !helpSec.open;
-        Settings.update({ show_help: !helpCollapsed });
-      });
-      sp.appendChild(helpSec);
-    }
+    sp.innerHTML = "";
+    sp.appendChild(brief);
+    sp.appendChild(fbPane);
+
+    // After a Check (right or wrong) show Feedback; otherwise the active
+    // tab — which selectActivity resets to Brief for each new activity.
+    const wantFb = _justChecked;
+    setDrawerTab(wantFb ? "fb" : (_activeDrawerTab || "brief"));
+    _justChecked = false;
+
+    // Feedback dot indicates fresh, unseen feedback.
+    const dot = document.getElementById("fb-dot");
+    if (dot) dot.hidden = !terminal;
+
+    // Stash hint/solution data for the bottom-bar buttons.
+    _activeAct = act;
+    refreshBottomBarState(act);
+    syncCheckButton(act);
   }
+
+  /* The bottom-bar Check button mirrors the per-activity Play button: it
+     reads "Check ✓" until the activity is solved/terminal, then "Next ›". */
+  function syncCheckButton(act) {
+    const btn = document.getElementById("check-btn");
+    if (!btn) return;
+    const ap = progress.activities[act.id] || {};
+    const terminal = (ap.status === "correct" || ap.status === "failed");
+    btn.textContent = terminal ? "Next ›" : "Check ✓";
+    btn.classList.toggle("is-next", terminal);
+    // At the very last activity there's nowhere to advance to.
+    const acts = pack ? pack.activities : [];
+    const isLast = acts.length && acts[acts.length - 1].id === act.id;
+    btn.disabled = terminal && isLast;
+  }
+
+  let _activeDrawerTab = "brief";
+  let _justChecked = false;
+  let _activeAct = null;
+
+  function setDrawerTab(pane) {
+    _activeDrawerTab = pane;
+    document.querySelectorAll(".sk-tab").forEach(t => {
+      const on = t.dataset.pane === pane;
+      t.classList.toggle("active", on);
+      t.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    document.querySelectorAll("#side-panel-body .sk-pane").forEach(p => {
+      p.classList.toggle("show", p.dataset.pane === pane);
+    });
+    if (pane === "fb") { const dot = document.getElementById("fb-dot"); if (dot) dot.hidden = true; }
+  }
+
+  /* Build a plain-text solution string for the current activity, where one
+     can be derived without running code. Returns "" when not derivable. */
+  function deriveSolution(act) {
+    const p = act.payload || {};
+    try {
+      if (act.type === "predict_output") {
+        if (p.mode === "multiple_choice") {
+          const opt = (p.options || []).find(o => o.id === p.answer);
+          return opt ? String(opt.content) : "";
+        }
+        return p.answer != null ? String(p.answer) : "";
+      }
+      if (act.type === "cloze") {
+        const lines = (p.blanks || []).map(b => b.id + " = " + (b.answer != null ? b.answer : ""));
+        return lines.join("\n");
+      }
+      if (act.type === "parsons") return p.canonical_code || "";
+      if (act.type === "starter_challenge") return p.model_solution || "";
+      if (act.type === "spot_the_bug" || act.type === "modify") {
+        if (p.constraint === "remove_line" && p.solution_code) return p.solution_code;
+        const b = (p.bugs || [])[0];
+        if (b) return "Line " + b.line + ": " + (b.fix != null ? b.fix : "(identify this line)");
+        return "";
+      }
+      if (act.type === "flowchart") {
+        return (p.blanks || []).map(b => b.id + " = " + (b.answer != null ? b.answer : "")).join("\n");
+      }
+      if (act.type === "trace_table") {
+        return "Work through each line and record the variable values after it runs.";
+      }
+      if (act.type === "testing") {
+        return "Each blank cell is checked automatically against the input's type and range.";
+      }
+    } catch (e) {}
+    return "";
+  }
+
+  function refreshBottomBarState(act) {
+    const hintBtn = document.getElementById("hint-btn");
+    const solnBtn = document.getElementById("soln-btn");
+    const hasHints = Array.isArray(act.hints) && act.hints.length > 0;
+    if (hintBtn) hintBtn.disabled = !hasHints;
+    const soln = deriveSolution(act);
+    _activeSolution = soln;
+    // Solutions are gated by the pack's show_solutions setting + outcome,
+    // mirroring the previous behaviour: never before a terminal outcome
+    // when the pack hides solutions until submission.
+    const ap = progress.activities[act.id] || {};
+    const showMode = (pack && pack.settings && pack.settings.show_solutions) || "submission";
+    const allowed = soln && (showMode === "always" ||
+      (showMode === "submission" && (ap.status === "correct" || ap.status === "failed" || ap.status === "incorrect")));
+    if (solnBtn) solnBtn.disabled = !allowed;
+  }
+  let _activeSolution = "";
 
   /* ---- Timer ---- */
   function startTimer(act) {
@@ -1684,7 +1779,8 @@
     if (!act.timing) return;
     let remaining = act.timing.limit_seconds;
     const label = DOM.el("div", { class: "kbd-help", id: "timer-label", style: "position:sticky;top:0" }, "Time: " + fmt(remaining));
-    document.querySelector(".activity-meta").appendChild(label);
+    const metaHost = document.querySelector(".activity-meta") || document.querySelector(".activity-wrap");
+    if (metaHost) metaHost.appendChild(label);
     function fmt(s) { const m = Math.floor(s / 60); const r = s % 60; return m + ":" + String(r).padStart(2, "0"); }
     timerHandle = setInterval(() => {
       remaining--;
@@ -1702,42 +1798,292 @@
     }, 1000);
   }
 
-  /* ---- Top bar ---- */
+  /* ---- Top bar / shell chrome ---- */
   function bindTopBar() {
-    const layout = () => document.getElementById("layout");
-    const tlc = document.getElementById("tl-collapse");
-    const tlr = document.getElementById("tl-rail");
-    const spc = document.getElementById("sp-collapse");
-    const spr = document.getElementById("sp-rail");
-    if (tlc) tlc.addEventListener("click", () => layout().classList.add("tl-collapsed"));
-    if (tlr) tlr.addEventListener("click", () => layout().classList.remove("tl-collapsed"));
-    if (spc) spc.addEventListener("click", () => layout().classList.add("sp-collapsed"));
-    if (spr) spr.addEventListener("click", () => layout().classList.remove("sp-collapsed"));
-    document.getElementById("size-up").addEventListener("click", () => Settings.bumpSize(1));
-    document.getElementById("size-down").addEventListener("click", () => Settings.bumpSize(-1));
-    document.getElementById("theme-btn").addEventListener("click", () => Settings.cycleTheme());
-    document.getElementById("settings-btn").addEventListener("click", () => Settings.openDialog({ showLayoutDefaults: true }));
-    document.getElementById("load-btn").addEventListener("click", openLoadDialog);
-    document.getElementById("export-btn").addEventListener("click", exportProgress);
-
-    setupPaneResize();
-
-    const s = Settings.get();
-    if (s.tl === "collapsed") document.getElementById("layout").classList.add("tl-collapsed");
-    if (s.sp === "collapsed") document.getElementById("layout").classList.add("sp-collapsed");
-    if (s.tl_width) document.getElementById("layout").style.setProperty("--tl-w", s.tl_width + "px");
-    if (s.sp_width) document.getElementById("layout").style.setProperty("--sp-w", s.sp_width + "px");
+    const byId = id => document.getElementById(id);
+    function on(id, ev, fn) { const e = byId(id); if (e) e.addEventListener(ev, fn); }
+    // Surviving tool buttons (desktop + mobile mirrors).
+    on("size-up", "click", () => Settings.bumpSize(1));
+    on("size-down", "click", () => Settings.bumpSize(-1));
+    on("theme-btn", "click", () => Settings.cycleTheme());
+    on("settings-btn", "click", () => Settings.openDialog({ showLayoutDefaults: true }));
+    on("load-btn", "click", openLoadDialog);
+    on("export-btn", "click", exportProgress);
+    on("size-up-m", "click", () => Settings.bumpSize(1));
+    on("size-down-m", "click", () => Settings.bumpSize(-1));
+    on("theme-btn-m", "click", () => Settings.cycleTheme());
+    on("settings-btn-m", "click", () => Settings.openDialog({ showLayoutDefaults: true }));
+    on("load-btn-m", "click", openLoadDialog);
+    bindSkinChrome();
   }
 
-  function setupPaneResize() {
-    DOM.setupPaneResize({
-      persist: function (key, width) {
-        const patch = {};
-        patch[key] = width;
-        Settings.update(patch);
-      }
+  function setupPaneResize() { /* no resizable panes in the retrofit shell */ }
+
+  /* ---- Retrofit shell controller: carousel nav, drawer tabs, collapse,
+     bottom bar (Check/Reset proxies + Hint/Solution post-its), modals. ---- */
+  let _hintIdx = 0;
+  function bindSkinChrome() {
+    const byId = id => document.getElementById(id);
+    // Carousel navigation.
+    const prev = byId("nav-prev"), next = byId("nav-next");
+    if (prev) prev.addEventListener("click", () => carouselStep(-1));
+    if (next) next.addEventListener("click", () => carouselStep(1));
+    window.addEventListener("resize", centreCarousel);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { try { centreCarousel(); } catch (e) {} });
+    // Arrow-key navigation (ignored while typing).
+    document.addEventListener("keydown", ev => {
+      if (ev.key !== "ArrowLeft" && ev.key !== "ArrowRight") return;
+      const a = document.activeElement;
+      if (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) return;
+      ev.preventDefault();
+      carouselStep(ev.key === "ArrowLeft" ? -1 : 1);
+    });
+
+    // Drawer tabs + collapse / handle.
+    document.querySelectorAll(".sk-tab").forEach(tb =>
+      tb.addEventListener("click", () => setDrawerTab(tb.dataset.pane)));
+    const bodyEl = byId("bodyEl");
+    if (byId("collapse")) byId("collapse").addEventListener("click", () => bodyEl.classList.add("collapsed"));
+    if (byId("handle")) byId("handle").addEventListener("click", () => bodyEl.classList.remove("collapsed"));
+
+    // Bottom bar — Check / Reset proxy the per-activity buttons the engine
+    // builds inside #main-region (preserving all their logic + locking).
+    if (byId("check-btn")) byId("check-btn").addEventListener("click", () => {
+      if (typeof currentPlayAction === "function") currentPlayAction();
+    });
+    if (byId("reset-btn")) byId("reset-btn").addEventListener("click", () => {
+      if (!currentResetBtn || currentResetBtn.disabled) return;
+      // "Re-load" swap: fade the work area + drawer out, perform the reset
+      // (which re-renders the activity), then fade back in.
+      const work = byId("main-region");
+      const tb = byId("side-panel-body");
+      if (work) work.classList.add("sk-swap");
+      if (tb) tb.classList.add("sk-swap");
+      setTimeout(() => {
+        try { currentResetBtn.click(); } catch (e) {}
+        requestAnimationFrame(() => {
+          const w2 = byId("main-region"); if (w2) w2.classList.remove("sk-swap");
+          const t2 = byId("side-panel-body"); if (t2) t2.classList.remove("sk-swap");
+        });
+      }, 180);
+    });
+
+    // Hint — cycling post-it note from the active activity's hints.
+    if (byId("hint-btn")) byId("hint-btn").addEventListener("click", toggleHintNote);
+    // Solution — 3-second hold to reveal a post-it.
+    bindSolutionHold();
+
+    // tag button → "how this activity works" modal.
+    if (byId("tagbtn")) byId("tagbtn").addEventListener("click", openHelpModal);
+    if (byId("info-btn")) byId("info-btn").addEventListener("click", openInfoModal);
+    // Modal close handlers.
+    document.querySelectorAll("[data-sk-close]").forEach(x =>
+      x.addEventListener("click", e => e.target.closest(".sk-scrim").classList.remove("on")));
+    document.querySelectorAll(".sk-scrim").forEach(scr =>
+      scr.addEventListener("click", e => { if (e.target === scr) scr.classList.remove("on"); }));
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape") document.querySelectorAll(".sk-scrim.on").forEach(s => s.classList.remove("on"));
     });
   }
+
+  function notesLayer() { return document.getElementById("notes"); }
+  function anchorNote(note, btn, side) {
+    if (!btn) return;
+    const r = btn.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    note.style.bottom = (window.innerHeight - r.top + 8) + "px";
+    if (side === "right") { note.style.right = (window.innerWidth - cx) + "px"; note.style.left = "auto"; note.style.transformOrigin = "bottom right"; }
+    else { note.style.left = cx + "px"; note.style.right = "auto"; note.style.transformOrigin = "bottom left"; }
+    requestAnimationFrame(() => {
+      const n = note.getBoundingClientRect();
+      if (n.right > window.innerWidth - 6) { note.style.left = "auto"; note.style.right = "6px"; }
+      if (n.left < 6) { note.style.right = "auto"; note.style.left = "6px"; }
+    });
+  }
+
+  function normaliseHintText(h) {
+    if (typeof h === "string") return h;
+    if (h && typeof h === "object") return String(h.text || "");
+    return "";
+  }
+  function toggleHintNote() {
+    const btn = document.getElementById("hint-btn");
+    const layer = notesLayer();
+    const existing = layer.querySelector(".note.hint");
+    if (existing) { existing.remove(); btn.classList.remove("on"); return; }
+    const act = _activeAct;
+    if (!act || !Array.isArray(act.hints) || !act.hints.length) return;
+    _hintIdx = 0;
+    btn.classList.add("on");
+    const multi = act.hints.length > 1;
+    const note = DOM.el("div", { class: "note hint" });
+    note.style.setProperty("--rot", "-2.5deg");
+    note.appendChild(DOM.el("div", { class: "ntape", "aria-hidden": "true" }));
+    const head = DOM.el("div", { class: "nhead" });
+    const cnt = DOM.el("span", { class: "cnt" });
+    cnt.appendChild(document.createTextNode("💡 Hint "));
+    const cntN = DOM.el("b", null, "1");
+    cnt.appendChild(cntN);
+    if (multi) cnt.appendChild(document.createTextNode(" / " + act.hints.length));
+    head.appendChild(cnt);
+    if (multi) {
+      const cyc = DOM.el("div", { class: "cyc" });
+      const back = DOM.el("button", { type: "button", "aria-label": "Previous hint" }, "‹");
+      const fwd = DOM.el("button", { type: "button", "aria-label": "Next hint" }, "›");
+      cyc.appendChild(back); cyc.appendChild(fwd);
+      head.appendChild(cyc);
+      const upd = () => { textEl.innerHTML = ""; textEl.appendChild(renderInlineMarkup(normaliseHintText(act.hints[_hintIdx]))); cntN.textContent = String(_hintIdx + 1); };
+      back.addEventListener("click", () => { _hintIdx = (_hintIdx - 1 + act.hints.length) % act.hints.length; upd(); });
+      fwd.addEventListener("click", () => { _hintIdx = (_hintIdx + 1) % act.hints.length; upd(); });
+    }
+    const close = DOM.el("button", { class: "nclose", type: "button", "aria-label": "Close hint" }, "✕");
+    head.appendChild(close);
+    note.appendChild(head);
+    const textEl = DOM.el("div", { class: "ntext" });
+    textEl.appendChild(renderInlineMarkup(normaliseHintText(act.hints[0])));
+    note.appendChild(textEl);
+    layer.appendChild(note);
+    anchorNote(note, btn, "right");
+    close.addEventListener("click", () => { note.remove(); btn.classList.remove("on"); });
+  }
+
+  function openSolutionNote() {
+    const btn = document.getElementById("soln-btn");
+    const layer = notesLayer();
+    const old = layer.querySelector(".note.soln");
+    if (old) old.remove();
+    if (!_activeSolution) return;
+    const note = DOM.el("div", { class: "note soln" });
+    note.style.setProperty("--rot", "2.5deg");
+    note.appendChild(DOM.el("div", { class: "ntape", "aria-hidden": "true" }));
+    const head = DOM.el("div", { class: "nhead" });
+    head.appendChild(document.createTextNode("🔑 Solution"));
+    const close = DOM.el("button", { class: "nclose", type: "button", "aria-label": "Close solution" }, "✕");
+    head.appendChild(close);
+    note.appendChild(head);
+    note.appendChild(DOM.el("pre", null, _activeSolution));
+    layer.appendChild(note);
+    anchorNote(note, btn, "left");
+    btn.classList.add("on");
+    close.addEventListener("click", () => { note.remove(); btn.classList.remove("on"); });
+  }
+
+  function bindSolutionHold() {
+    const btn = document.getElementById("soln-btn");
+    const fill = document.getElementById("soln-fill");
+    if (!btn) return;
+    let timer = null, open = false, pendingClose = false;
+    function resetFill() { if (fill) { fill.style.transition = "width .2s ease"; fill.style.width = "0%"; } }
+    function close() { const n = notesLayer().querySelector(".note.soln"); if (n) n.remove(); open = false; btn.classList.remove("on"); }
+    function cancelHold() { if (timer) { clearTimeout(timer); timer = null; } resetFill(); }
+    btn.addEventListener("pointerdown", e => {
+      if (btn.disabled) return;
+      e.preventDefault();
+      if (open) { pendingClose = true; return; }
+      if (fill) { fill.style.transition = "width 3s linear"; requestAnimationFrame(() => { fill.style.width = "100%"; }); }
+      timer = setTimeout(() => { timer = null; resetFill(); openSolutionNote(); open = true; }, 3000);
+    });
+    btn.addEventListener("pointerup", () => {
+      if (pendingClose) { pendingClose = false; close(); resetFill(); return; }
+      cancelHold();
+    });
+    btn.addEventListener("pointerleave", () => { pendingClose = false; cancelHold(); });
+    btn.addEventListener("pointercancel", cancelHold);
+    // Re-render clears notes; expose a resetter used by selectActivity.
+    _closeSolutionNote = () => { close(); resetFill(); };
+  }
+  let _closeSolutionNote = function () {};
+
+  function openHelpModal() {
+    const act = _activeAct; if (!act) return;
+    const label = PyQuiz.Constants.TYPE_LABELS[act.type] || act.type;
+    const meta = (PyQuiz.Constants.TYPE_HELP && PyQuiz.Constants.TYPE_HELP[act.type]) || {};
+    const icon = document.getElementById("help-icon");
+    const title = document.getElementById("help-title");
+    const body = document.getElementById("help-body");
+    if (icon) icon.textContent = meta.icon || "📋";
+    if (title) title.textContent = label;
+    if (body) {
+      body.innerHTML = "";
+      const p = DOM.el("p");
+      p.appendChild(renderInlineMarkup(meta.text || ("This is a " + label + " activity. " + (act.instructions || ""))));
+      body.appendChild(p);
+    }
+    document.getElementById("help-scrim").classList.add("on");
+  }
+
+  function openInfoModal() {
+    const title = document.getElementById("info-title");
+    const body = document.getElementById("info-body");
+    if (title) title.textContent = pack ? (pack.title || "Pack") : "Pack";
+    if (body) {
+      body.innerHTML = "";
+      if (pack && pack.description) {
+        const p = DOM.el("p"); p.appendChild(renderInlineMarkup(pack.description)); body.appendChild(p);
+      }
+      let done = 0; const total = (pack && pack.activities) ? pack.activities.length : 0;
+      Object.keys(progress.activities || {}).forEach(id => { if (progress.activities[id].status === "correct") done++; });
+      const secCount = (pack && pack.sections) ? pack.sections.length : 0;
+      const ul = DOM.el("ul");
+      ul.appendChild(DOM.el("li", null, total + " activities" + (secCount ? " across " + secCount + " sections" : "")));
+      ul.appendChild(DOM.el("li", null, "Progress: " + done + " / " + total + " complete"));
+      ul.appendChild(DOM.el("li", null, "Green tokens in the bar show what you've finished. Use the arrows or ← → keys to move."));
+      body.appendChild(ul);
+    }
+    document.getElementById("info-scrim").classList.add("on");
+  }
+
+  /* Give every code box a window: a frame (.sk-window) holding a title bar
+     (filename + copy icon + coloured dots) above the code element. The bar
+     is a SIBLING of the code element, so renderers that rebuild their code
+     (e.g. remove-line) don't wipe it. The remove-line Bin is excluded — it
+     is styled as a dashed Parsons-style bin instead. */
+  function decorateCodeWindows(root, act) {
+    const sel = '.code-block, .cloze-code, .parsons-area[data-area="program"], .stb-code:not(.stb-remove-bin)';
+    root.querySelectorAll(sel).forEach(el => {
+      if (el.parentElement && el.parentElement.classList.contains("sk-window")) return;
+      const win = DOM.el("div", { class: "sk-window" });
+      const bar = DOM.el("div", { class: "sk-winbar" });
+      bar.appendChild(DOM.el("span", { class: "fname" }, "main.py"));
+      const copy = DOM.el("button", { type: "button", class: "sk-copy", "aria-label": "Copy code", title: "Copy code" }, "⧉");
+      copy.addEventListener("click", () => copyActivityCode(act, el, copy));
+      bar.appendChild(copy);
+      const dots = DOM.el("span", { class: "dots", "aria-hidden": "true" });
+      dots.appendChild(DOM.el("i")); dots.appendChild(DOM.el("i")); dots.appendChild(DOM.el("i"));
+      bar.appendChild(dots);
+      el.parentNode.insertBefore(win, el);
+      win.appendChild(bar);
+      win.appendChild(el);
+    });
+  }
+
+  async function copyActivityCode(act, el, btn) {
+    // Prefer the activity's canonical/assembled code; fall back to the
+    // visible text in this window (minus the title bar + line gutters).
+    let code = "";
+    try {
+      if (currentController && currentController.getResponse && PyQuiz.Code && PyQuiz.Code.assemble) {
+        code = PyQuiz.Code.assemble(act, currentController.getResponse());
+      }
+    } catch (e) {}
+    if (!code) { try { code = (PyQuiz.Code && PyQuiz.Code.codeForCopy) ? PyQuiz.Code.codeForCopy(act) : ""; } catch (e) {} }
+    if (!code) {
+      const clone = el.cloneNode(true);
+      const wb = clone.querySelector(".sk-winbar"); if (wb) wb.remove();
+      clone.querySelectorAll(".code-ln, .stb-gutter, .line-num").forEach(g => g.remove());
+      code = clone.textContent.replace(/\n{3,}/g, "\n\n").trim();
+    }
+    if (!code) return;
+    try { await navigator.clipboard.writeText(code); }
+    catch (e) {
+      const ta = document.createElement("textarea"); ta.value = code; document.body.appendChild(ta);
+      ta.select(); try { document.execCommand("copy"); } catch (er) {} document.body.removeChild(ta);
+    }
+    const prev = btn.textContent;
+    btn.textContent = "✓"; btn.classList.add("copied");
+    setTimeout(() => { btn.textContent = prev; btn.classList.remove("copied"); }, 1200);
+  }
+
 
   function exportProgress() {
     if (!progress) { showError("No progress to export."); return; }

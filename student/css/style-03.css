@@ -1,0 +1,279 @@
+/* ============================================================
+   RETROFIT SHELL ("skin") — carousel top, drawer, work area,
+   bottom bar, post-it notes, modals. Engine + activity renderers
+   are unchanged; this only restyles the chrome around #main-region.
+   ============================================================ */
+.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+body{font-family:var(--font-body);background:var(--bg);color:var(--fg);margin:0;overflow:hidden}
+.app.sk{display:flex;flex-direction:column;height:100vh;height:100dvh;min-height:0}
+
+/* ---- top ---- */
+.sk-top{display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid var(--sk-line);background:var(--bg);flex:none}
+.sk-brand{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:800;font-size:1.16rem;flex:none;text-decoration:none;color:var(--fg)}
+.sk-brand .mark{width:30px;height:30px;border-radius:9px;background:var(--sk-green);color:#fff;display:grid;place-items:center;font-size:17px;font-family:var(--font-display)}
+.sk-carousel{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;min-width:0}
+.sk-nav{flex:none;width:34px;height:38px;border-radius:10px;border:1px solid var(--sk-line2);background:var(--panel-2);display:grid;place-items:center;font-size:1.1rem;color:var(--fg)}
+.sk-nav:hover{background:var(--sk-sel-soft);border-color:var(--sk-sel-line);color:var(--sk-sel)}
+.sk-dock{flex:0 1 540px;display:flex;align-items:center;overflow:hidden;position:relative;min-width:0}
+.sk-tape{display:flex;flex:none;align-items:center;gap:11px;padding:12px 0;will-change:transform;transition:transform .45s cubic-bezier(.2,.85,.25,1)}
+.sk-tok{flex:none;height:38px;min-width:38px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--sk-paper);border:1px solid var(--sk-line2);color:var(--muted);font-weight:700;font-size:.9rem;position:relative;cursor:pointer;transition:background .3s,color .3s,border-color .3s,box-shadow .3s,transform .42s cubic-bezier(.2,.85,.25,1)}
+.sk-tok .num{display:grid;place-items:center;width:30px;height:30px;flex:none}
+.sk-tok .lab{max-width:0;overflow:hidden;white-space:nowrap;opacity:0;font-family:var(--font-display);font-weight:700;font-size:.95rem;transition:max-width .3s ease .12s,opacity .3s ease .12s,margin-left .3s ease .12s}
+.sk-tok:hover{background:var(--sk-sel-soft);border-color:var(--sk-sel-line)}
+.sk-tok.done{background:var(--sk-green-soft);border-color:#BCE0CC;color:var(--sk-green-ink)}
+.sk-tok.failed{background:var(--sk-red-soft);border-color:#EBC4BB;color:#8E2C1B}
+.sk-tok.current{background:var(--sk-sel);border-color:var(--sk-sel);color:#fff;padding:0 20px 0 6px;z-index:6;box-shadow:0 4px 12px -4px rgba(108,77,196,.5)}
+.sk-tok.current .num{background:rgba(255,255,255,.24);border-radius:50%;width:32px;height:32px;font-size:1rem}
+.sk-tok.current .lab{max-width:280px;opacity:1;margin-left:10px;font-size:1.12rem}
+.sk-tools{flex:none;display:flex;gap:6px}
+.sk-tools-m{display:none}
+.sk-ico{width:34px;height:34px;border-radius:9px;border:1px solid var(--sk-line2);background:var(--bg);display:grid;place-items:center;color:var(--muted);font-weight:700;font-size:.82rem;cursor:pointer}
+.sk-ico:hover{border-color:var(--sk-sel);color:var(--sk-sel)}
+
+/* ---- body ---- */
+.sk-body{flex:1;display:grid;grid-template-columns:var(--sk-pw) 1fr;min-height:0;position:relative;transition:grid-template-columns .32s cubic-bezier(.3,.8,.3,1)}
+.sk-body.collapsed{--sk-pw:0px}
+.sk-drawer{position:relative;border-right:1px solid var(--sk-line);background:var(--sk-paper);overflow:hidden;display:flex;flex-direction:column}
+.sk-dh{padding:15px 16px 6px;min-width:var(--sk-pw);display:flex;align-items:center;gap:8px}
+.sk-tagbtn{display:inline-flex;align-items:center;gap:7px;height:34px;font-family:var(--font-mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;padding:0 12px;border-radius:8px;background:var(--sk-sel-soft);color:var(--sk-sel-ink);border:1px solid var(--sk-sel-line);cursor:pointer}
+.sk-tagbtn:hover{background:#E6DCF7}
+.sk-collapse{margin-left:auto;width:34px;height:34px;border-radius:9px;border:1px solid var(--sk-line2);background:var(--bg);color:var(--muted);display:grid;place-items:center;font-size:1rem;cursor:pointer}
+.sk-collapse:hover{border-color:var(--sk-sel);color:var(--sk-sel)}
+.sk-score{display:flex;align-items:center;gap:10px;padding:4px 16px 10px;min-width:var(--sk-pw)}
+.sk-score-track{flex:1;display:flex;gap:2px;height:8px;border-radius:999px;overflow:hidden;background:var(--sk-line)}
+.sk-score-track i{flex:1 1 0;background:var(--sk-line2)}
+.sk-score-track i.ok{background:var(--sk-green)}
+.sk-score-track i.bad{background:var(--sk-red)}
+.sk-score-num{flex:none;font-family:var(--font-mono);font-size:.72rem;font-weight:700;color:var(--muted);letter-spacing:.02em}
+.sk-tabs{display:flex;gap:2px;padding:8px 16px 0;min-width:var(--sk-pw);border-bottom:1px solid var(--sk-line)}
+.sk-tab{flex:1;padding:10px 6px;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;color:var(--muted);font-weight:700;font-size:.88rem;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-family:inherit;border-radius:8px 8px 0 0}
+.sk-tab[data-pane="brief"]{background:var(--sk-amber-soft)}
+.sk-tab.active{color:var(--fg);border-color:var(--sk-sel)}
+.sk-tabdot{width:8px;height:8px;border-radius:50%;background:var(--sk-green)}
+.sk-tbody{flex:1;overflow:auto;padding:18px;min-width:var(--sk-pw)}
+.sk-pane{display:none}.sk-pane.show{display:block}
+.sk-plabel{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:8px}
+.sk-desc{font-size:1.02rem;line-height:1.6;margin:0}
+.sk-fb{border-radius:12px;padding:13px 15px;display:flex;gap:11px;align-items:flex-start;font-weight:700;background:var(--sk-green-soft);border:1px solid #BCE0CC;color:#1F5C3A}
+.sk-fb.bad{background:var(--sk-red-soft);border-color:#EBC4BB;color:#8E2C1B}
+.sk-fb .ic{width:26px;height:26px;border-radius:50%;flex:none;display:grid;place-items:center;color:#fff;background:var(--sk-green)}
+.sk-fb.bad .ic{background:var(--sk-red)}
+.sk-fb .sub{display:block;font-weight:400;font-size:.92rem;color:#2c6a47;margin-top:2px}
+.sk-fb.bad .sub{color:#8E2C1B}
+
+/* drawer handle (collapsed only) */
+.sk-handle{position:absolute;left:0;top:50%;transform:translateY(-50%);display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:30px;height:104px;border:1px solid var(--sk-sel-line);border-left:none;border-radius:0 14px 14px 0;background:var(--sk-sel-soft);color:var(--sk-sel);box-shadow:var(--sk-shadow);z-index:12;cursor:pointer}
+.sk-handle b{font-size:1.2rem;line-height:1}
+.sk-handle .vl{writing-mode:vertical-rl;font-family:var(--font-mono);font-size:.56rem;letter-spacing:.18em;text-transform:uppercase}
+.sk-handle:hover{background:#E4D8F6}
+.sk-body.collapsed .sk-handle{display:flex}
+
+/* ---- work area (hosts #main-region content) ---- */
+.sk-work{min-height:0;overflow:auto;padding:30px 28px;background-image:radial-gradient(rgba(70,50,15,.055) 1.2px,transparent 1.2px);background-size:24px 24px;transition:opacity .18s ease,transform .18s ease}
+/* "Re-load" swap effect used when Reset is pressed (mirrors the mockup). */
+.sk-work.sk-swap{opacity:0;transform:translateY(8px)}
+#side-panel-body{transition:opacity .18s ease,transform .18s ease}
+#side-panel-body.sk-swap{opacity:0;transform:translateY(8px)}
+
+/* ---- bottom bar ---- */
+.sk-bar{display:flex;align-items:center;gap:12px;padding:14px 20px;border-top:1px solid var(--sk-line);background:var(--bg);flex:none}
+.sk-left{display:flex;gap:10px}
+.sk-sec{height:50px;padding:0 18px;border-radius:13px;border:1.5px solid var(--sk-line2);background:var(--sk-paper);font-weight:700;display:flex;align-items:center;gap:8px;color:var(--fg);cursor:pointer;font-family:inherit}
+.sk-sec .bi{font-size:1.12rem;line-height:1}
+.sk-sec:hover{border-color:var(--fg)}
+.sk-sec.hint{color:var(--sk-amber-ink);background:var(--sk-amber-soft);border-color:#EBD9A3}
+.sk-sec.soln{color:var(--sk-sel-ink);background:var(--sk-sel-soft);border-color:var(--sk-sel-line);position:relative;overflow:hidden}
+.sk-sec.soln .fill{position:absolute;left:0;top:0;bottom:0;width:0;background:#B49CE4;z-index:0}
+.sk-sec.soln .bi,.sk-sec.soln .txt{position:relative;z-index:1}
+.sk-sec.info{color:var(--sk-sel-ink)}
+/* Info button is always collapsed to just the (i). */
+.sk-sec.info{width:50px;padding:0;justify-content:center;gap:0}
+.sk-sec.info .txt{display:none}
+.sk-sec:disabled{opacity:.42;cursor:not-allowed}
+.sk-sec.on{box-shadow:0 0 0 3px var(--sk-sel-soft)}
+.sk-check{margin-left:auto;height:50px;padding:0 34px;border-radius:13px;border:none;background:var(--sk-green);color:#fff;font-family:var(--font-display);font-weight:800;font-size:1.1rem;display:flex;align-items:center;gap:10px;box-shadow:0 8px 22px -10px rgba(47,158,99,.7);cursor:pointer}
+.sk-check:hover{background:var(--sk-green-ink)}
+.sk-check:disabled{opacity:.5;cursor:not-allowed}
+
+/* ---- post-it notes ---- */
+#notes{position:fixed;inset:0;z-index:30;pointer-events:none}
+.note{pointer-events:auto;position:absolute;width:268px;border-radius:6px;padding:14px 16px 16px;box-shadow:0 14px 30px -12px rgba(40,30,10,.5);transform:rotate(var(--rot,-2deg));animation:sk-pop .22s cubic-bezier(.2,1.3,.4,1)}
+@keyframes sk-pop{from{opacity:0;transform:rotate(var(--rot,-2deg)) translateY(14px) scale(.96)}to{opacity:1}}
+.note.hint{background:#FCEF9F;color:#5b4a10}
+.note.soln{background:#E7DCFA;color:#3c2b6b}
+.note .ntape{position:absolute;top:-9px;left:50%;transform:translateX(-50%) rotate(-3deg);width:74px;height:20px;background:rgba(255,255,255,.5);border:1px solid rgba(0,0,0,.06);border-radius:2px}
+.note .nhead{display:flex;align-items:center;gap:8px;font-family:var(--font-display);font-weight:800;font-size:.84rem;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em}
+.note .cyc{display:flex;gap:4px;margin-left:auto}
+.note .cyc button,.note .nclose{width:24px;height:24px;border-radius:6px;border:1px solid rgba(0,0,0,.14);background:rgba(255,255,255,.45);font-weight:800;display:grid;place-items:center;cursor:pointer}
+.note .nclose{margin-left:8px}
+.note .ntext{font-size:.98rem;line-height:1.5}
+.note pre{margin:0;font-family:var(--font-mono);font-size:.96rem;line-height:1.7;white-space:pre-wrap}
+
+/* ---- modals ---- */
+.sk-scrim{position:fixed;inset:0;background:rgba(30,20,8,.34);backdrop-filter:blur(1.5px);display:none;place-items:center;z-index:50;padding:24px}
+.sk-scrim.on{display:grid}
+.sk-modal{width:min(560px,92vw);max-height:80vh;overflow:auto;background:var(--sk-paper);border:1px solid var(--sk-line2);border-radius:22px;box-shadow:0 40px 90px -30px rgba(40,20,0,.6);padding:26px 28px}
+.sk-modal .mh{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.sk-modal .badge{width:44px;height:44px;border-radius:13px;background:var(--sk-sel-soft);color:var(--sk-sel);display:grid;place-items:center;font-size:1.3rem;flex:none}
+.sk-modal h2{font-family:var(--font-display);font-weight:800;font-size:1.4rem;margin:0;color:var(--fg)}
+.sk-modal .sub{color:var(--muted);font-family:var(--font-mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase}
+.sk-modal .x{margin-left:auto;width:40px;height:40px;border-radius:11px;border:1px solid var(--sk-line2);background:var(--bg);font-size:1.05rem;color:var(--muted);cursor:pointer}
+.sk-modal p{font-size:1rem;line-height:1.6}.sk-modal ul{margin:8px 0 0;padding-left:18px}.sk-modal li{margin:5px 0}
+
+/* hide legacy shell bits that may linger from engine code paths */
+.pane-rail,.pane-collapse-btn,.task-list-footer{display:none!important}
+/* The per-activity header is kept only to host the Reset/Play proxies the
+   bottom bar drives — hide it entirely from view in the work area. */
+.sk .activity-header{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);pointer-events:none}
+
+/* ---- mobile ---- */
+@media (max-width:820px){
+  .sk-tools{display:none}
+  .sk-brand .bn{display:none}
+  .sk-tools-m{display:flex;gap:6px;margin-left:auto}
+  .sk-top{padding:11px 8px}
+  .sk-body{display:flex;flex-direction:column}
+  .sk-drawer{border-right:none;border-bottom:1px solid var(--sk-line);flex:none}
+  .sk-tbody{max-height:24vh}
+  .sk-handle{display:none!important}
+  .sk-collapse{display:none}
+  .sk-work{flex:1;padding:18px 14px}
+  .sk-tok.current{max-width:calc(100vw - 200px)}
+  .sk-tok.current .lab{min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .sk-bar{gap:8px;padding:11px 12px}
+  .sk-left{gap:8px}
+  .sk-sec{width:46px;height:46px;padding:0;justify-content:center;gap:0}
+  .sk-sec .txt{display:none}
+  .sk-check{flex:0 0 auto;margin-left:auto;padding:0 22px;min-width:116px}
+  .note{width:min(280px,calc(100vw - 20px))}
+}
+
+/* ---- dark / high-contrast token nudges for the skin ---- */
+[data-theme="dark"]{--sk-paper:#26262B;--sk-line:#34343A;--sk-line2:#44444C;--sk-green-soft:#1E3A2C;--sk-sel-soft:#2E2640;--sk-sel-line:#4A3D72;--sk-amber-soft:#3A2F12;--sk-red-soft:#3A201B}
+[data-theme="hc"]{--sk-paper:#000;--sk-line:#FFEC3D;--sk-line2:#FFEC3D;--sk-sel:#FFEC3D;--sk-sel-ink:#FFEC3D;--sk-sel-soft:#000;--sk-sel-line:#FFEC3D;--sk-green:#3DFF7A;--sk-green-soft:#000;--sk-amber-soft:#000}
+/* I/O panel relocated into the drawer Brief pane — clean definition layout. */
+.sk-tbody .io-panel{margin-top:16px;background:transparent;border:none;padding:0}
+.sk-tbody .io-grid{display:flex;flex-direction:column;gap:10px}
+.sk-tbody .io-col-head,.sk-tbody .io-corner{display:none}
+.sk-tbody .io-row-head{font-family:var(--font-mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0 0 4px}
+.sk-tbody .io-cell{display:block;background:var(--sk-paper);border:1px solid var(--sk-line);border-radius:8px;padding:7px 10px;margin:0;white-space:pre-wrap;font-family:var(--font-mono);font-size:.9rem;line-height:1.5}
+.sk-tbody .io-cell.io-empty{color:var(--muted)}
+/* Pair the Current/Expected cells of a split row under a single heading. */
+.sk-tbody .io-cell-current{margin-bottom:6px;border-left:3px solid var(--sk-amber)}
+.sk-tbody .io-cell-expected{border-left:3px solid var(--sk-green)}
+.sk-tbody .io-cell-current::before{content:"Now";display:block;font-family:var(--font-mono);font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;color:var(--sk-amber-ink);font-weight:700;margin-bottom:2px}
+.sk-tbody .io-cell-expected::before{content:"Goal";display:block;font-family:var(--font-mono);font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;color:var(--sk-green-ink);font-weight:700;margin-bottom:2px}
+[data-theme="dark"] .sk-tbody .io-cell{background:#26262B}
+
+[data-theme="dark"] .sk-work,[data-theme="hc"] .sk-work{background-image:none}
+
+/* ============================================================
+   ACTIVITY SKIN — restyle the real renderer output to the mockup
+   visual language (window code cards, consistent zone widths,
+   output/bin/options/word-bank, tables, cloze blanks, flowchart).
+   Scoped to .sk so the teacher app is untouched.
+   ============================================================ */
+.sk{--zw:30rem}
+/* Centre the activity column in the work area. */
+.sk .sk-work .activity-wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:22px}
+.sk .sk-work .activity-body{width:100%;background:transparent;border:none;box-shadow:none;padding:0;margin:0;display:flex;flex-direction:column;align-items:center;gap:20px}
+.sk .sk-work .activity-body>*{width:100%;max-width:var(--zw)}
+.sk .sk-work .po,.sk .sk-work .parsons,.sk .sk-work .cloze,.sk .sk-work .trace-table-wrap,.sk .sk-work .flowchart-activity,.sk .sk-work .testing-activity{display:flex;flex-direction:column;align-items:center;gap:16px;width:100%}
+/* Section sub-labels above zones (Code / Output / etc.) */
+.sk .sk-work h3{font-family:var(--font-mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0 0 2px;align-self:flex-start;width:min(var(--zw),100%)}
+
+/* ---- code as a "window" card (the .sk-window wrapper is the frame) ---- */
+.sk .sk-work .sk-window{width:min(var(--zw),100%);background:#F4EFE6;border:1px solid var(--sk-line2);border-radius:14px;overflow:hidden;
+  box-shadow:0 2px 0 rgba(40,30,10,.04),0 18px 40px -22px rgba(40,30,10,.4)}
+.sk .sk-work .sk-window>.code-block,
+.sk .sk-work .sk-window>.cloze-code,
+.sk .sk-work .sk-window>.stb-code,
+.sk .sk-work .sk-window>.parsons-area[data-area="program"]{
+  width:100%;background:transparent;border:none;border-radius:0;box-shadow:none;padding:0;margin:0}
+.sk .sk-work .code-block pre{padding:14px 18px;font-size:1.02rem;line-height:1.85;white-space:pre;overflow-x:auto;margin:0}
+[data-theme="dark"] .sk .sk-work .sk-window{background:#1F1F24}
+
+/* Injected window title bar: filename + copy icon (left), coloured dots (right) */
+.sk .sk-winbar{display:flex;align-items:center;gap:8px;height:38px;padding:0 14px;background:#ECE6DA;border-bottom:1px solid var(--sk-line2);font-family:var(--font-mono);font-size:.74rem;color:var(--muted)}
+.sk .sk-winbar .fname{font-weight:700;color:var(--fg)}
+.sk .sk-winbar .sk-copy{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;border:1px solid var(--sk-line2);background:var(--bg);color:var(--muted);cursor:pointer;font-size:.8rem;line-height:1;padding:0}
+.sk .sk-winbar .sk-copy:hover{border-color:var(--sk-sel);color:var(--sk-sel)}
+.sk .sk-winbar .sk-copy.copied{border-color:var(--sk-green);color:var(--sk-green-ink)}
+.sk .sk-winbar .dots{margin-left:auto;display:flex;gap:6px}
+.sk .sk-winbar .dots i{width:11px;height:11px;border-radius:50%}
+.sk .sk-winbar .dots i:nth-child(1){background:#E0584B}
+.sk .sk-winbar .dots i:nth-child(2){background:#E6B23C}
+.sk .sk-winbar .dots i:nth-child(3){background:#46B36B}
+[data-theme="dark"] .sk .sk-winbar{background:#2A2A30}
+[data-theme="hc"] .sk .sk-winbar .dots i{outline:1px solid #FFEC3D}
+
+/* ---- predict: output box + MC options ---- */
+.sk .sk-work .po-free{width:min(var(--zw),100%);display:flex;flex-direction:column;gap:6px}
+.sk .sk-work .po-free label{font-family:var(--font-mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.sk .sk-work .po-input{width:100%;font-family:var(--font-mono);font-size:1.04rem;line-height:1.85;background:#FFFEFB;border:2px solid var(--sk-green);border-radius:13px;padding:14px 18px;min-height:120px;
+  box-shadow:inset 0 0 0 4px var(--sk-green-soft);outline:none;resize:vertical}
+[data-theme="dark"] .sk .sk-work .po-input{background:#1F1F24;box-shadow:inset 0 0 0 4px var(--sk-green-soft)}
+.sk .sk-work .po-options{width:min(var(--zw),100%);display:flex;flex-direction:column;gap:10px}
+.sk .sk-work .po-options-legend{font-family:var(--font-mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0 0 2px}
+.sk .sk-work .po-option{display:flex;align-items:center;gap:12px;text-align:left;background:#FFFEFB;border:1.5px solid var(--sk-line2);border-radius:11px;padding:12px 14px;cursor:pointer;width:100%}
+.sk .sk-work .po-option:hover{border-color:var(--sk-sel-line)}
+.sk .sk-work .po-option.selected{border-color:var(--sk-sel);box-shadow:0 0 0 3px var(--sk-sel-soft)}
+.sk .sk-work .po-option-code{margin:0;font-family:var(--font-mono);font-size:1rem;white-space:pre;background:transparent;border:none;padding:0}
+[data-theme="dark"] .sk .sk-work .po-option{background:#1F1F24}
+
+/* ---- parsons: program window + bin same width ---- */
+.sk .sk-work .parsons-areas{width:min(var(--zw),100%);display:flex;flex-direction:column;gap:14px}
+.sk .sk-work .parsons-area.parsons-bin{width:100%;border-radius:12px;border:1.5px dashed var(--sk-line2);background:#FBF9F4;padding:14px}
+/* The program area is framed as a code window; hide its "Program" heading
+   (the injected window title bar replaces it) and pad the block list. */
+.sk .sk-work .parsons-area[data-area="program"]>h3{display:none}
+.sk .sk-work .parsons-area[data-area="program"] .parsons-list{padding:14px}
+.sk .sk-work .parsons-area.drag-over{background:var(--sk-sel-soft);border-color:var(--sk-sel-line)}
+.sk .sk-work .parsons-block{background:#FFFEFB;border:1.5px solid var(--sk-line2);border-radius:11px;padding:13px 15px;font-family:var(--font-mono);font-size:1.02rem}
+.sk .sk-work .parsons-block.selected{border-color:var(--sk-sel);box-shadow:0 0 0 2px var(--sk-sel-soft);background:var(--sk-sel-soft)}
+.sk .sk-work .parsons-block.drop-above{box-shadow:0 3px 0 var(--sk-sel) inset}
+.sk .sk-work .parsons-block.drop-below{box-shadow:0 -3px 0 var(--sk-sel) inset}
+[data-theme="dark"] .sk .sk-work .parsons-block{background:#1F1F24}
+/* ---- bug/modify code window ---- */
+.sk .sk-work .stb-code{list-style:none;margin:0;padding:14px;font-family:var(--font-mono);font-size:1.02rem;line-height:1.7}
+.sk .sk-work .sk-window>.stb-code{padding:14px}
+/* Remove-line: the program list is the window; the Bin is a dashed
+   Parsons-style frame with NO title bar, sitting below it. */
+.sk .sk-work .stb-remove-bin-section{width:min(var(--zw),100%);margin-top:14px}
+.sk .sk-work .stb-remove-bin-label{font-family:var(--font-mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:8px}
+.sk .sk-work .stb-remove-bin{list-style:none;margin:0;padding:14px;width:100%;border:1.5px dashed var(--sk-line2);border-radius:12px;background:#FBF9F4;min-height:56px}
+[data-theme="dark"] .sk .sk-work .stb-remove-bin{background:#1F1F24}
+.sk .sk-work .stb-bin-empty{color:var(--muted);font-family:var(--font-mono);font-size:.92rem;text-align:center}
+
+/* ---- cloze: blanks + word bank ---- */
+.sk .sk-work .cloze-code,.sk .sk-work .sk-window>.cloze-code{font-family:var(--font-mono);font-size:1.02rem;line-height:1.9;padding:14px 18px}
+.sk .sk-work .cloze-code .code-row{padding:0}
+.sk .sk-work .blank-text,.sk .sk-work .blank-select,.sk .sk-work .blank-bank,.sk .sk-work .blank-pool{display:inline-flex;align-items:center;justify-content:center;min-width:46px;height:30px;padding:0 8px;border-radius:7px;border:2px dashed var(--sk-sel-line);background:var(--sk-sel-soft);color:var(--sk-sel-ink);font-weight:700}
+.sk .sk-work .blank-text.filled,.sk .sk-work .blank-bank.filled,.sk .sk-work .blank-pool.filled{border-style:solid;background:#fff}
+.sk .sk-work .cloze-pool{width:min(var(--zw),100%);display:flex;flex-wrap:wrap;gap:10px;border:none;background:transparent;padding:0}
+.sk .sk-work .cloze-pool .chip{padding:9px 15px;border-radius:10px;border:1.5px solid var(--sk-line2);background:#FFFEFB;font-family:var(--font-mono);font-size:1rem}
+.sk .sk-work .cloze-pool .chip.used{opacity:.35}
+[data-theme="dark"] .sk .sk-work .cloze-code{background:#1F1F24}
+
+/* ---- trace + testing tables ---- */
+.sk .sk-work .trace-table-wrap{width:min(var(--zw),100%);overflow:auto}
+.sk .sk-work .trace-table,.sk .sk-work .testing-table{width:100%;border-collapse:separate;border-spacing:0;font-family:var(--font-mono);font-size:.9rem;background:var(--sk-paper);border:1px solid var(--sk-line2);border-radius:12px;overflow:hidden}
+.sk .sk-work .trace-table th,.sk .sk-work .testing-table th{background:var(--sk-sel);color:#fff;font-family:var(--font-display);font-size:.8rem;text-align:left;padding:9px 10px}
+.sk .sk-work .trace-table td,.sk .sk-work .testing-table td{border-top:1px solid var(--sk-line);border-left:1px solid var(--sk-line);padding:8px 10px}
+.sk .sk-work .trace-table td:first-child,.sk .sk-work .testing-table td:first-child{border-left:none}
+
+/* ---- flowchart fills the column nicely ---- */
+.sk .sk-work .flowchart-activity,.sk .sk-work .flowchart-svg{width:100%;max-width:none}
+
+/* On wider screens give code/tables a little more breathing room. */
+@media (min-width:1100px){ .sk{--zw:34rem} }
+
+
+/* Welcome screen (no pack loaded): hide the drawer, carousel and bottom
+   bar so the loader fills the work area cleanly. */
+body.welcome-mode .sk-drawer,
+body.welcome-mode .sk-carousel,
+body.welcome-mode .sk-bar,
+body.welcome-mode .sk-handle{display:none!important}
+body.welcome-mode .sk-body{grid-template-columns:1fr}
+body.welcome-mode .sk-work{background-image:none}

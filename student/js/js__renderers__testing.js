@@ -110,11 +110,6 @@
     wrap.appendChild(table);
     root.appendChild(wrap);
 
-    const note = DOM.el("p", { class: "testing-fill-note" });
-    note.appendChild(DOM.el("span", { class: "swatch", "aria-hidden": "true" }));
-    note.appendChild(document.createTextNode("Complete the highlighted cells."));
-    root.appendChild(note);
-
     host.appendChild(root);
 
     function snapshot() {

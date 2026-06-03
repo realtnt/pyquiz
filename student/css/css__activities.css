@@ -1606,7 +1606,13 @@
 /* --- locked activity body (out of attempts / already correct) --- */
 .activity-body.activity-locked {
   opacity: 0.95;
+  /* Block ALL interaction once an activity is terminal (correct or failed)
+     — covers clickable non-form elements (parsons blocks, cloze chips,
+     spot-the-bug lines, MC options) that el.disabled can't reach. */
+  pointer-events: none;
 }
+/* …but keep the window title bar usable so students can still copy the code. */
+.activity-body.activity-locked .sk-winbar { pointer-events: auto; }
 .activity-body.activity-locked input:disabled,
 .activity-body.activity-locked select:disabled,
 .activity-body.activity-locked textarea:disabled {

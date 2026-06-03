@@ -15,13 +15,13 @@
   --panel: #FFFFFF;
   --panel-2: #F3EFE6;
   --fg: #1B1B1F;
-  --muted: #5C5C63;
+  --muted: #6A655C;
   --border: #DCD6CA;
   --border-strong: #8C8678;
-  --accent: #2D5BA6;
+  --accent: #6C4DC4;          /* mockup "select" purple */
   --accent-fg: #FFFFFF;
-  --ok: #1E6E3C;
-  --bad: #B12A38;
+  --ok: #2F9E63;
+  --bad: #C2452F;
   --warn: #8A5A00;
   --focus: #E07A00;
   --code-bg: #F0EBDC;
@@ -36,7 +36,17 @@
   --fs: 18px;
   --letter: 0.02em;
   --font-body: "Atkinson Fallback", "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", "Open Sans", Verdana, sans-serif;
-  --font-mono: ui-monospace, "Cascadia Mono", "SF Mono", "Source Code Pro", Consolas, monospace;
+  --font-display: "Bricolage Grotesque", var(--font-body);
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", "SF Mono", "Source Code Pro", Consolas, monospace;
+
+  /* ---- "skin" palette (retrofit shell chrome) ---- */
+  --sk-paper:#FFFDF8; --sk-line:#EAE3D6; --sk-line2:#DAD2C2;
+  --sk-green:#2F9E63; --sk-green-ink:#1E6B43; --sk-green-soft:#E5F4EB;
+  --sk-red:#C2452F; --sk-red-soft:#FBEAE6;
+  --sk-sel:#6C4DC4; --sk-sel-ink:#523499; --sk-sel-soft:#EEE8FA; --sk-sel-line:#D9CCF2;
+  --sk-amber:#D9A93B; --sk-amber-soft:#FBF3DD; --sk-amber-ink:#7A5B11;
+  --sk-shadow:0 1px 2px rgba(40,30,10,.05),0 16px 40px -26px rgba(40,30,10,.3);
+  --sk-pw:300px;
 }
 
 /* HIGH CONTRAST: yellow on black, real contrast not pastel */
@@ -1233,15 +1243,15 @@ body.welcome-mode .topbar .burger { display: none; }
   gap: 14px;
 }
 .welcome-logo {
-  font-family: var(--font-mono);
-  font-size: 3.2em;
-  font-weight: 700;
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  font-family: var(--font-display);
+  font-size: 3em;
+  font-weight: 800;
+  color: #FFFFFF;
+  background: var(--sk-green);
   width: 96px; height: 96px;
-  border-radius: 24px;
+  border-radius: 26px;
   display: flex; align-items: center; justify-content: center;
-  letter-spacing: -0.05em;
+  letter-spacing: 0;
   margin-bottom: 4px;
 }
 @supports not (background: color-mix(in srgb, red, blue)) {

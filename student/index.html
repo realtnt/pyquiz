@@ -6,6 +6,9 @@
 <meta name="color-scheme" content="light">
 <meta name="application-name" content="PyQuiz — Student">
 <title>PyQuiz — Student</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="css/css__base.css">
 <link rel="stylesheet" href="css/css__activities.css">
@@ -13,81 +16,88 @@
 <body>
 <div class="skip"><a href="#main-region" class="skip-link">Skip to main content</a></div>
 
-<div class="app">
-  <header class="topbar" role="banner">
-    <a href="../index.html" class="brand-link" aria-label="PyQuiz home" title="Back to the PyQuiz home page">
-      <svg class="brand-mark" viewBox="0 0 32 32" width="30" height="30" fill="none" aria-hidden="true">
-        <rect x="2" y="2" width="28" height="28" rx="7" fill="#1E3A5F"/>
-        <circle cx="10" cy="11" r="3" fill="#E07A00"/><circle cx="22" cy="11" r="3" fill="#2E8B6B"/><circle cx="16" cy="22" r="3" fill="#F4A93C"/>
-        <path d="M10 11 L16 22 L22 11" stroke="#FAF7F2" stroke-width="1.8" fill="none"/>
-      </svg>
-      <span class="brand-word">PyQuiz</span>
+<div class="app sk">
+  <header class="sk-top" role="banner">
+    <a href="../index.html" class="sk-brand" aria-label="PyQuiz home" title="Back to the PyQuiz home page">
+      <span class="mark" aria-hidden="true">P</span><span class="bn">PyQuiz</span>
     </a>
-    <span class="topbar-pack-title" id="pack-title"></span>
-    <span class="topbar-spacer" aria-hidden="true"></span>
-    <div class="right toolbar">
-      <button class="btn icon" id="load-btn" aria-label="Load a pack" title="Load — open a .pyquiz pack from your computer">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/></svg>
-      </button>
-      <button class="btn icon" id="export-btn" aria-label="Export progress" title="Export — download your progress">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M4 20h16"/></svg>
-      </button>
-      <span class="toolbar-sep" aria-hidden="true"></span>
-      <button class="btn icon icon-sm mobile-hide" id="size-down" aria-label="Decrease text size" title="Smaller text">A−</button>
-      <button class="btn icon icon-sm mobile-hide" id="size-up" aria-label="Increase text size" title="Larger text">A+</button>
-      <button class="btn icon mobile-hide" id="theme-btn" aria-label="Cycle theme" title="Cycle theme (default / dark / high contrast)">◐</button>
-      <button class="btn icon" id="settings-btn" aria-label="Open settings" title="Settings">⚙</button>
+    <div class="sk-carousel">
+      <button class="sk-nav" id="nav-prev" data-dir="-1" aria-label="Previous activity">←</button>
+      <div class="sk-dock" id="dock"><div class="sk-tape" id="tape" role="tablist" aria-label="Activities"></div></div>
+      <button class="sk-nav" id="nav-next" data-dir="1" aria-label="Next activity">→</button>
+    </div>
+    <span class="topbar-pack-title sr-only" id="pack-title"></span>
+    <div class="sk-tools">
+      <button class="sk-ico" id="load-btn" aria-label="Load a pack" title="Load — open a .pyquiz pack">⤓</button>
+      <button class="sk-ico" id="export-btn" aria-label="Export progress" title="Export — download your progress">⤒</button>
+      <button class="sk-ico" id="size-down" aria-label="Decrease text size" title="Smaller text">A−</button>
+      <button class="sk-ico" id="size-up" aria-label="Increase text size" title="Larger text">A+</button>
+      <button class="sk-ico" id="theme-btn" aria-label="Cycle theme" title="Cycle theme">◐</button>
+      <button class="sk-ico" id="settings-btn" aria-label="Open settings" title="Settings">⚙</button>
     </div>
   </header>
   <div id="storage-banner" class="banner" hidden></div>
   <div id="error-banner" class="banner error" hidden></div>
-  <div id="layout" class="layout">
-    <nav class="task-list" id="task-list" aria-label="Activities">
-      <button class="pane-rail" id="tl-rail" aria-label="Expand activities" title="Expand activities">
-        <span class="pane-rail-icon" aria-hidden="true">⇥</span>
-        <span class="pane-rail-label">Activities</span>
-      </button>
-      <div class="pane-inner">
-        <div class="pane-head">
-          <h2 class="pane-section-title">Activities</h2>
-          <button class="pane-collapse-btn" id="tl-collapse" aria-label="Collapse activities" title="Collapse panel">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/><path d="M15 9l-3 3 3 3"/></svg>
-          </button>
+
+  <div class="sk-body" id="bodyEl">
+    <aside class="sk-drawer" id="side-panel" aria-label="Activity details">
+      <div class="sk-dh">
+        <button class="sk-tagbtn" id="tagbtn" title="What is this activity?"><span id="tagtext">activity</span></button>
+        <div class="sk-tools-m">
+          <button class="sk-ico" id="load-btn-m" aria-label="Load a pack" title="Load a pack">⤓</button>
+          <button class="sk-ico" id="size-down-m" aria-label="Decrease text size" title="Smaller text">A−</button>
+          <button class="sk-ico" id="size-up-m" aria-label="Increase text size" title="Larger text">A+</button>
+          <button class="sk-ico" id="theme-btn-m" aria-label="Cycle theme" title="Cycle theme">◐</button>
+          <button class="sk-ico" id="settings-btn-m" aria-label="Open settings" title="Settings">⚙</button>
         </div>
-        <div class="task-list-scroll">
-          <ol id="task-ol"></ol>
-        </div>
-        <div class="task-list-footer" id="task-list-footer">
-          <div class="task-list-footer-row">
-            <span class="task-list-score-label">Score</span>
-            <span class="task-list-score" id="score" aria-label="Score">0 / 0</span>
-          </div>
-          <div class="task-list-progress" aria-hidden="true">
-            <div class="task-list-progress-fill" id="task-list-progress-fill"></div>
-          </div>
-        </div>
+        <button class="sk-collapse" id="collapse" aria-label="Hide panel" title="Hide panel">‹</button>
       </div>
-    </nav>
-    <main class="main" id="main-region" tabindex="-1"></main>
-    <aside class="side-panel" id="side-panel" aria-label="Help and feedback">
-      <button class="pane-rail" id="sp-rail" aria-label="Expand properties" title="Expand properties">
-        <span class="pane-rail-icon" aria-hidden="true">⇤</span>
-        <span class="pane-rail-label">Properties</span>
-      </button>
-      <div class="pane-inner">
-        <div class="pane-head">
-          <h2 class="pane-section-title">Properties</h2>
-          <button class="pane-collapse-btn" id="sp-collapse" aria-label="Collapse properties" title="Collapse panel">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/><path d="M9 9l3 3-3 3"/></svg>
-          </button>
-        </div>
-        <div class="side-panel-body" id="side-panel-body"></div>
+      <div class="sk-score" id="sk-score" aria-label="Pack progress">
+        <div class="sk-score-track" id="sk-score-track"></div>
+        <span class="sk-score-num" id="sk-score-num">0/0</span>
       </div>
+      <div class="sk-tabs" role="tablist">
+        <button class="sk-tab active" data-pane="brief" role="tab" aria-selected="true">Brief</button>
+        <button class="sk-tab" data-pane="fb" role="tab" aria-selected="false">Feedback <span class="sk-tabdot" id="fb-dot" hidden></span></button>
+      </div>
+      <div class="sk-tbody" id="side-panel-body"></div>
     </aside>
+
+    <button class="sk-handle" id="handle" title="Show details" aria-label="Show details"><b>›</b><span class="vl">Details</span></button>
+    <main class="sk-work" id="main-region" tabindex="-1" aria-label="Activity"></main>
   </div>
+
+  <footer class="sk-bar">
+    <div class="sk-left">
+      <button class="sk-sec info" id="info-btn"><span class="bi">ⓘ</span><span class="txt">Info</span></button>
+      <button class="sk-sec" id="reset-btn"><span class="bi">↺</span><span class="txt">Reset</span></button>
+      <button class="sk-sec hint" id="hint-btn"><span class="bi">💡</span><span class="txt">Hint</span></button>
+      <button class="sk-sec soln" id="soln-btn" title="Hold to reveal"><span class="fill" id="soln-fill"></span><span class="bi">🔑</span><span class="txt">Solution</span></button>
+    </div>
+    <button class="sk-check" id="check-btn">Check ✓</button>
+  </footer>
+
+  <!-- hidden compatibility nodes kept in sync by the engine -->
+  <ol id="task-ol" hidden aria-hidden="true"></ol>
+  <span class="sr-only"><span id="score">0 / 0</span><span id="task-list-progress-fill"></span></span>
+
+  <div id="notes"></div>
+
+  <div class="sk-scrim" id="help-scrim"><div class="sk-modal" role="dialog" aria-modal="true" aria-labelledby="help-title">
+    <div class="mh"><span class="badge" id="help-icon">📋</span><div><div class="sub">How this activity works</div><h2 id="help-title">Activity</h2></div><button class="x" data-sk-close aria-label="Close">✕</button></div>
+    <div id="help-body"></div>
+  </div></div>
+
+  <div class="sk-scrim" id="info-scrim"><div class="sk-modal" role="dialog" aria-modal="true" aria-labelledby="info-title">
+    <div class="mh"><span class="badge">📚</span><div><div class="sub">About this collection</div><h2 id="info-title">Pack</h2></div><button class="x" data-sk-close aria-label="Close">✕</button></div>
+    <div id="info-body"></div>
+  </div></div>
+
   <span class="live" aria-live="polite" id="live-polite"></span>
   <span class="live" aria-live="assertive" id="live-assert"></span>
 </div>
+
+<link rel="stylesheet" href="css/style-03.css">
 
 <!--
   Script load order matters. Each layer depends on those above it.

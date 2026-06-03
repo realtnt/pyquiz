@@ -437,7 +437,7 @@
       "aria-label": "Code — click a line to select, then use the bin icon to remove it"
     });
     const binSection = DOM.el("div", { class: "stb-remove-bin-section" });
-    binSection.appendChild(DOM.el("div", { class: "stb-remove-bin-label" }, "Removed line"));
+    binSection.appendChild(DOM.el("div", { class: "stb-remove-bin-label" }, "Bin"));
     const binArea = DOM.el("ol", {
       class: "stb-code stb-remove-bin",
       "aria-label": "Removed line — click to bring it back"
