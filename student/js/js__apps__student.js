@@ -114,7 +114,7 @@
     hero.appendChild(DOM.el("div", { class: "welcome-logo", "aria-hidden": "true" }, "P"));
     hero.appendChild(DOM.el("h1", { class: "welcome-title" }, "PyQuiz"));
     hero.appendChild(DOM.el("p", { class: "welcome-tagline" },
-      "A Python practice tool for KS3 and KS4 computing teachers. Build your own packs of bite-sized activities, structured the way you teach — and let your students work through them at their own pace, with instant feedback."));
+      "A Python practice tool for computing teachers. Build your own packs of bite-sized activities, structured the way you teach — and let your students work through them at their own pace, with instant feedback."));
     const heroAction = DOM.el("div", { class: "welcome-cta welcome-cta-row" });
     const cta = DOM.button("📂  Load a pack", () => {
       document.getElementById("load-btn").click();
@@ -131,7 +131,7 @@
 
     /* Pack chooser — fetched from packs/index.json (the manifest). Static
        sites have no directory listing, so the manifest is the source of
-       truth. Grouped by key stage. Falls back silently if absent (e.g. when
+       truth. Grouped by level. Falls back silently if absent (e.g. when
        the app is opened as a bare file with no packs folder alongside). */
     const chooser = DOM.el("section", { class: "welcome-chooser" });
     chooser.appendChild(DOM.el("h2", { class: "welcome-chooser-h" }, "Choose an activity pack"));
@@ -168,7 +168,7 @@
       const base = url ? url.replace(/index\.json$/, "") : "../packs/";
       const groups = {};
       packs.forEach(p => { (groups[p.level || "Other"] = groups[p.level || "Other"] || []).push(p); });
-      const order = ["KS3", "KS4", "KS5", "Other"];
+      const order = ["Ages 11–14", "Ages 14–16", "Ages 16–19", "Other"];
       order.filter(k => groups[k]).forEach(level => {
         const g = DOM.el("div", { class: "welcome-chooser-group" });
         g.appendChild(DOM.el("div", { class: "welcome-chooser-level" }, level));
@@ -271,7 +271,7 @@
       {
         icon: "♿",
         title: "Accessible by default",
-        desc: "Atkinson Hyperlegible or OpenDyslexic typefaces, adjustable size, high-contrast theme, full keyboard support and aria-live announcements. Designed with KS3 reading levels in mind."
+        desc: "Atkinson Hyperlegible or OpenDyslexic typefaces, adjustable size, high-contrast theme, full keyboard support and aria-live announcements. Designed with younger readers in mind."
       },
       {
         icon: "✦",
@@ -329,21 +329,21 @@
         type: "cloze",
         title: "Cloze",
         desc: "Fill in the blanks in a code template — free text, drop-down, or click-to-place from a word bank.",
-        value: "Targets specific syntactic elements (a keyword, an operator, a function name) in isolation. Useful for J277-style key-term recall.",
+        value: "Targets specific syntactic elements (a keyword, an operator, a function name) in isolation. Useful for key-term recall.",
         sample: "for i in ____(5):\n    ____(i)"
       },
       {
         type: "trace_table",
         title: "Trace table",
         desc: "Step through a program line by line and record how each variable changes.",
-        value: "Builds a precise mental model of how code executes. A favourite of both OCR J277 and H446 — and a transferable skill across exam boards.",
+        value: "Builds a precise mental model of how code executes. A transferable skill across courses and qualifications.",
         sample: "  i  x  out\n  0  0\n  1  1"
       },
       {
         type: "testing",
         title: "Testing",
         desc: "Design a table of test cases — Normal, Boundary, Invalid and Erroneous — for a function. Leave cells blank for the student to complete.",
-        value: "Test design is explicit in both J277 and H446. Students classify inputs and reason about edge cases — a skill that's hard to practise with code-writing alone.",
+        value: "Test design appears in many computing courses. Students classify inputs and reason about edge cases — a skill that's hard to practise with code-writing alone.",
         sample: "name   type   expected\n\"Sam\"  normal  Hi, Sam\n\"\"     bound.  Hi, "
       },
       {

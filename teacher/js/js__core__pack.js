@@ -60,7 +60,7 @@
       title: "Untitled pack",
       description: "",
       language: "python",
-      audience: "ks3",
+      audience: "ages-11-14",
       author: "",
       created_at: nowISO(),
       updated_at: nowISO(),

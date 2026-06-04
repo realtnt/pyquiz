@@ -133,7 +133,7 @@
     }
 
     // Strip rows whose effective state matches the previous row's. These
-    // convey no new information; OCR accepts either style. Compress BOTH
+    // convey no new information; either style is accepted. Compress BOTH
     // expected and student before comparing.
     function stripRedundant(effective) {
       const out = [];
@@ -349,7 +349,7 @@
   }
 
   /* Classify ONE input value against ONE column spec. Returns one of
-     "normal" | "boundary" | "invalid" | "erroneous" per OCR definitions:
+     "normal" | "boundary" | "invalid" | "erroneous" per these definitions:
        normal    — correct type, comfortably inside the valid range
        boundary  — correct type, on the very edge (we define edge ±1)
        invalid   — correct type, but out of range (rejected), not a boundary

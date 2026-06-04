@@ -43,13 +43,13 @@
       schema_version:      { type: "string", required: true, fixed: C.SCHEMA_VERSION },
       id:                  { type: "id", required: true, description: "Unique pack id (UUID or slug)." },
       title:               { type: "string", required: true, example: "Loops — Week 1" },
-      description:         { type: "string", required: false, example: "Introductory loop practice for Year 8." },
+      description:         { type: "string", required: false, example: "Introductory loop practice for beginners." },
       language:            { type: "enum", required: true, values: ["python"], default: "python" },
-      audience:            { type: "enum", required: false, values: ["ks3", "ks4", "ks5", "other"], default: "ks3" },
+      audience:            { type: "enum", required: false, values: ["ages-11-14", "ages-14-16", "ages-16-19", "other"], default: "ages-11-14" },
       author:              { type: "string", required: false, description: "Stripped on student export." },
       created_at:          { type: "string", required: false, description: "ISO timestamp." },
       updated_at:          { type: "string", required: false, description: "ISO timestamp." },
-      spec_refs:           { type: "array", required: false, items: { type: "string" }, description: "External spec codes. Stripped on student export.", example: ["OCR_J277_2.2"] },
+      spec_refs:           { type: "array", required: false, items: { type: "string" }, description: "External spec codes. Stripped on student export.", example: ["CS.2.2"] },
       tags:                { type: "array", required: false, items: { type: "string" }, example: ["loops", "iteration"] },
       settings: {
         type: "object", required: true,
@@ -119,7 +119,7 @@
       },
       skills:                 { type: "array", required: false, items: { type: "string" }, description: "Optional list of skill identifiers exercised, e.g. ['predict_output', 'trace_execution']. Free-form strings used by teachers and analytics." },
       misconceptions:         { type: "array", required: false, items: { type: "string" }, description: "Optional list of misconception identifiers this activity targets, e.g. ['assignment_vs_comparison']." },
-      exam_refs:              { type: "array", required: false, items: { type: "string" }, description: "Optional exam-board reference codes, e.g. ['OCR_J277_2.2.1']. Alias of spec_refs — supported for clarity." },
+      exam_refs:              { type: "array", required: false, items: { type: "string" }, description: "Optional course or specification reference codes, e.g. ['CS.2.2.1']. Free-form — use whatever your country or qualification uses. Alias of spec_refs — supported for clarity." },
       primm_phase:            { type: "enum",  required: false, values: ["predict", "run", "investigate", "modify", "make"], description: "Optional: which PRIMM phase this activity fits. Useful for teachers structuring a journey." },
       concept_level:          { type: "enum",  required: false, values: ["introduce", "practise", "consolidate", "extend"], description: "Optional: where in the concept arc this activity sits. introduce=first encounter, practise=repetition, consolidate=apply across contexts, extend=push beyond." },
       solution_explanation:   { type: "string", required: false, description: "Shown via Reveal solution, gated by pack setting." },
@@ -402,7 +402,7 @@
     },
 
     testing: {
-      description: "Build a table of test cases for a snippet of code. Columns are Test data | Type of test | Expected output. The teacher fills some cells and leaves others blank — whatever is blank is what the STUDENT completes (at least two of the three pieces per row). The student's value(s) are checked automatically against the input's type and range and classified Normal, Boundary, Invalid or Erroneous. Designed for J277/H446-style testing questions.",
+      description: "Build a table of test cases for a snippet of code. Columns are Test data | Type of test | Expected output. The teacher fills some cells and leaves others blank — whatever is blank is what the STUDENT completes (at least two of the three pieces per row). The student's value(s) are checked automatically against the input's type and range and classified Normal, Boundary, Invalid or Erroneous. Designed for course-style testing questions.",
       fields: {
         code:          { type: "code", required: true, description: "The code under test." },
         function_name: { type: "string", required: false, description: "Used in I/O panel hints if the code defines a function." },

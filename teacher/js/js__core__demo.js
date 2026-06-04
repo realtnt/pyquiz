@@ -25,11 +25,11 @@
       title: "PyQuiz — Feature Tour",
       description: "A demonstration pack covering every activity type and variant.",
       language: "python",
-      audience: "ks3",
+      audience: "ages-11-14",
       author: "demo@school",
       created_at: "2026-05-23T10:00:00Z",
       updated_at: "2026-05-23T10:00:00Z",
-      spec_refs: ["OCR_J277_2.2"],
+      spec_refs: [],
       tags: ["demo", "tour"],
       settings: { shuffle: false, show_hints: true, show_solutions_after: "submission", pass_threshold: 0.7, show_runner_after: "correct" },
       sections: [

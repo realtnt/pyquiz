@@ -5,7 +5,7 @@
  * Inline code template with blank inputs of three flavours:
  *   free_text — typed answer
  *   select    — per-blank drop-down
- *   bank      — J277-style word bank:
+ *   bank      — word bank:
  *               · click a chip → fills the first empty blank, IN
  *                 TEMPLATE ORDER, consuming exactly one chip
  *               · click a placed word → returns it to the bank

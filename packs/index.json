@@ -1,6 +1,6 @@
 {
   "schema": "pyquiz-packs@1",
-  "generated": "2026-06-03",
+  "generated": "2026-06-04",
   "packs": [
     {
       "id": "builtin-feature-tour",
@@ -14,7 +14,7 @@
     {
       "id": "builtin-loops-intro",
       "title": "Count-Controlled Loops",
-      "level": "KS3",
+      "level": "Ages 11–14",
       "description": "A gentle first look at for and while loops.",
       "activities": 12,
       "sections": 5,
@@ -23,7 +23,7 @@
     {
       "id": "builtin-selection-intro",
       "title": "Selection (if / else)",
-      "level": "KS3",
+      "level": "Ages 11–14",
       "description": "if / elif / else and boolean conditions.",
       "activities": 12,
       "sections": 5,
@@ -32,7 +32,7 @@
     {
       "id": "builtin-variables-intro",
       "title": "Variables & Assignment",
-      "level": "KS3",
+      "level": "Ages 11–14",
       "description": "First contact with variables, assignment and output.",
       "activities": 12,
       "sections": 5,
@@ -41,7 +41,7 @@
     {
       "id": "builtin-loops-journey",
       "title": "Loops: a complete journey",
-      "level": "KS4",
+      "level": "Ages 14–16",
       "description": "A complete journey: for, while and nested loops across four sections.",
       "activities": 80,
       "sections": 4,

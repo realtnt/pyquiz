@@ -1751,7 +1751,7 @@
     // Description is prose, not code — render in a normal (non-monospace) font.
     DOM.field(sec, "Description", "textarea", pack.description, v => { pack.description = v; saveDraft(); }, { prose: true, rows: 3 });
     DOM.field(sec, "Audience", "select", pack.audience, v => { pack.audience = v; saveDraft(); }, [
-      ["ks3", "KS3"], ["ks4", "KS4 (OCR J277)"], ["ks5", "KS5 (OCR H446)"], ["other", "Other"]
+      ["ages-11-14", "Ages 11–14"], ["ages-14-16", "Ages 14–16"], ["ages-16-19", "Ages 16–19"], ["other", "Other"]
     ]);
     DOM.field(sec, "Author", "text", pack.author, v => { pack.author = v; saveDraft(); });
     DOM.chipsField(sec, "Tags", pack.tags || [], v => { pack.tags = v; saveDraft(); },
@@ -1929,7 +1929,7 @@
       onChange();
     }, { min: 1, max: 5, step: 1, labels: { "1": "★", "2": "★★", "3": "★★★", "4": "★★★★", "5": "★★★★★" } });
     DOM.field(meta.body, "Topics", "text", (act.topics || []).join(", "), v => { act.topics = v.split(",").map(s => s.trim()).filter(Boolean); onChange(); }, { hint: "Comma-separated, e.g. loops, range" });
-    DOM.field(meta.body, "Spec refs", "text", (act.spec_refs || []).join(", "), v => { act.spec_refs = v.split(",").map(s => s.trim()).filter(Boolean); onChange(); }, { hint: "Comma-separated exam-board reference codes" });
+    DOM.field(meta.body, "Spec refs", "text", (act.spec_refs || []).join(", "), v => { act.spec_refs = v.split(",").map(s => s.trim()).filter(Boolean); onChange(); }, { hint: "Comma-separated course or specification reference codes" });
     DOM.field(meta.body, "Est. time (s)", "number", act.estimated_time_seconds || 0, v => { act.estimated_time_seconds = parseInt(v, 10) || 0; onChange(); });
     DOM.field(meta.body, "Points", "number", act.points || 0, v => { act.points = parseInt(v, 10) || 0; onChange(); });
     // Section assignment (only if the pack has any sections)
@@ -2347,7 +2347,7 @@
     snipWrap.appendChild(copySnip);
     repo.appendChild(snipWrap);
     repo.appendChild(DOM.el("p", { class: "export-note" },
-      "Tip: adjust the level (KS3 / KS4 / KS5) and description to suit. These only affect how the pack is listed in the chooser."));
+      "Tip: adjust the level (Ages 11–14 / Ages 14–16 / Ages 16–19) and description to suit. These only affect how the pack is listed in the chooser."));
     body.appendChild(repo);
 
     // ---- Secondary: editable JSON (less prominent) ----
@@ -2363,18 +2363,18 @@
     Modal.open({ title: "Export", body: body });
   }
 
-  /* Best-guess key stage for the manifest entry, from the pack's audience
+  /* Best-guess level for the manifest entry, from the pack's audience
      or activity difficulty. The teacher can edit it in the snippet. */
   function guessLevel(p) {
     const a = (p.audience || "").toLowerCase();
-    if (a.indexOf("ks5") >= 0 || a.indexOf("a-level") >= 0 || a.indexOf("alevel") >= 0) return "KS5";
-    if (a.indexOf("ks4") >= 0 || a.indexOf("gcse") >= 0) return "KS4";
-    if (a.indexOf("ks3") >= 0) return "KS3";
+    if (a.indexOf("16-19") >= 0) return "Ages 16–19";
+    if (a.indexOf("14-16") >= 0) return "Ages 14–16";
+    if (a.indexOf("11-14") >= 0) return "Ages 11–14";
     const diffs = (p.activities || []).map(x => x.difficulty || 1);
     const avg = diffs.length ? diffs.reduce((s, x) => s + x, 0) / diffs.length : 1;
-    if (avg >= 4) return "KS5";
-    if (avg >= 2.6) return "KS4";
-    return "KS3";
+    if (avg >= 4) return "Ages 16–19";
+    if (avg >= 2.6) return "Ages 14–16";
+    return "Ages 11–14";
   }
 
   /* ---- Top bar ---- */

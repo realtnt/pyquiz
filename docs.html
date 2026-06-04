@@ -117,7 +117,7 @@ The file's contents must be the raw JSON object only — no commentary, no Markd
 ================================================================
 WHAT PYQUIZ IS FOR
 ================================================================
-PyQuiz builds the skills that come *before* (and alongside) writing code from scratch: reading code, predicting its behaviour, tracing it, spotting and fixing bugs, and modifying it. These are first-class skills and strong preparation for the written problem-solving / program-comprehension exam papers at GCSE and A-Level. Students work activity by activity and get instant feedback.
+PyQuiz builds the skills that come *before* (and alongside) writing code from scratch: reading code, predicting its behaviour, tracing it, spotting and fixing bugs, and modifying it. These are first-class skills and strong preparation for the written problem-solving and program-comprehension assessments used in many computing courses. Students work activity by activity and get instant feedback.
 
 A pack is a set of activities grouped into **sections**, designed as a journey: support is heavy at the start of a concept and fades as confidence grows.
 
@@ -130,7 +130,7 @@ THE PACK SHAPE (top level)
   "id": "kebab-case-unique-id",
   "title": "Human-readable pack title",
   "description": "One or two sentences on what the pack covers.",
-  "audience": "ks3" | "ks4" | "ks5",
+  "audience": "ages-11-14" | "ages-14-16" | "ages-16-19" | "other",
   "author": "PyQuiz",
   "tags": ["loops", "selection", ...],
   "settings": { "show_hints": true, "show_solutions": "submission", "pass_threshold": 0.7 },
@@ -289,7 +289,7 @@ THE 9 ACTIVITY TYPES (payload shapes + a real example each)
      ]
    }
    - IMPORTANT: the code under test MUST validate its input (reject out-of-range values, e.g. `return -1` / `return False` / `print("NOT VALID")`). Otherwise the Invalid category is meaningless — there is nothing to reject. Always write a validating function for testing activities, and only use an `invalid` row when the code actually rejects out-of-range input.
-   - The four OCR test types: `normal` (correct type, accepted), `boundary` (correct type, on the very edge — we count the range edges and one step beyond, e.g. for 0..100 that's -1, 0, 100, 101), `invalid` (correct type but out of range, rejected), `erroneous` (wrong data type, rejected).
+   - The four test-case types: `normal` (correct type, accepted), `boundary` (correct type, on the very edge — we count the range edges and one step beyond, e.g. for 0..100 that's -1, 0, 100, 101), `invalid` (correct type but out of range, rejected), `erroneous` (wrong data type, rejected).
    - `output_type`: how Expected output is shown — "lines" (each printed line on its own row; use for code that prints), "number", "string", "boolean", or "list". Pick the one that matches what the code produces so multi-line output isn't shown as one run-on string. For the example above the output is genuinely three/four separate lines, so use "lines", NOT "0 1 2 3".
    - `input_columns` types: "int"/"float" (min/max) or "str" (min_length/max_length). The type + range drive the automatic classification of the student's value.
    - VARY THE ROWS within a table: don't leave the same column blank every time. Mix rows where you give the test data (so the student works out the Type of test) with rows where you give the Type of test (so the student supplies a value). A good table might be e.g. two Normal, a Boundary and an Invalid, with the blank column differing from row to row.
@@ -321,9 +321,9 @@ SECTION BY CONCEPT. Break the topic into a logical sequence of sections, each a 
 VARIETY DRILLS A SKILL. Within a section use several activity types, and repeat a type more than once if it helps cement the idea. A typical section might be: 2× predict, 1× cloze, 1× parsons, 1× trace, 1× spot_the_bug, 1× modify, then 1× testing or starter_challenge to close.
 
 KEY STAGE TONE:
-  • KS3 (Y7–9): small concrete examples, friendly wording, difficulty mostly 1–3.
-  • KS4 (GCSE): exam-style phrasing, trace/test/debug emphasis, difficulty 2–4.
-  • KS5 (A-Level): richer algorithms, boundary reasoning, complex traces, difficulty 3–5.
+  • Ages 11–14: small concrete examples, friendly wording, difficulty mostly 1–3.
+  • Ages 14–16: exam-style phrasing, trace/test/debug emphasis, difficulty 2–4.
+  • Ages 16–19: richer algorithms, boundary reasoning, complex traces, difficulty 3–5.
 Stay exam-board neutral. You may set `exam_refs` only if the teacher names a board/spec.
 
 CONTENT INTEGRITY (check every activity):
@@ -335,19 +335,20 @@ CONTENT INTEGRITY (check every activity):
 HOW THE TEACHER WILL ASK
 ================================================================
 The teacher will give a short brief such as:
-  "Create a 30-minute activity on selection for Year 8 with 5 final challenges. Chunk it into easy-to-follow sections with a logical progression."
+  "Create a 30-minute activity on selection for ages 12–13 with 5 final challenges. Chunk it into easy-to-follow sections with a logical progression."
 Interpret it: pick a sensible number of sections and activities for the stated length (≈ 90s each as a guide), honour the year group, topic and any counts (e.g. "5 final challenges" → 5 starter_challenge or testing activities in the closing section), and apply the pedagogy above.
 
 Now produce the complete pack as a single JSON object, delivered as a downloadable file (or, failing that, inside one fenced code block) and nothing else.
+
 </script>
     </div>
 
     <h2 id="request">Writing your request</h2>
     <p>After the prompt, describe what you want in plain English. Be specific about the things that matter — year group, topic, length, and any particular structure or counts. For example:</p>
-    <pre><code>Create a 30-minute activity on selection for Year 8 with 5 final
+    <pre><code>Create a 30-minute activity on selection for ages 12–13 with 5 final
 challenges. Chunk it into easy-to-follow sections with a logical
 progression.</code></pre>
-    <p class="muted">Other things worth stating: a misconception to target ("students confuse <code>=</code> and <code>==</code>"), a context ("use a login-attempts example"), or an exam focus ("A-Level, emphasise boundary testing"). The more specific the brief, the closer the first draft.</p>
+    <p class="muted">Other things worth stating: a misconception to target ("students confuse <code>=</code> and <code>==</code>"), a context ("use a login-attempts example"), or an exam focus ("advanced level, emphasise boundary testing"). The more specific the brief, the closer the first draft.</p>
 
     <h2 id="types">Activity types</h2>
     <p>A pack mixes eight activity types. Variety lets you drill one skill from several angles; the prompt knows how to choose and sequence them.</p>
@@ -441,3 +442,4 @@ progression.</code></pre>
 </script>
 </body>
 </html>
+
