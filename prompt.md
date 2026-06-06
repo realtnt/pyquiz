@@ -212,7 +212,7 @@ SECTION BY CONCEPT. Break the topic into a logical sequence of sections, each a 
 
 VARIETY DRILLS A SKILL. Within a section use several activity types, and repeat a type more than once if it helps cement the idea. A typical section might be: 2× predict, 1× cloze, 1× parsons, 1× trace, 1× spot_the_bug, 1× modify, then 1× testing or starter_challenge to close.
 
-KEY STAGE TONE:
+AGE-BAND TONE:
   • Ages 11–14: small concrete examples, friendly wording, difficulty mostly 1–3.
   • Ages 14–16: exam-style phrasing, trace/test/debug emphasis, difficulty 2–4.
   • Ages 16–19: richer algorithms, boundary reasoning, complex traces, difficulty 3–5.
