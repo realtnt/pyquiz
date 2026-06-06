@@ -425,9 +425,13 @@
   }
 
   /* ---- Pack load ---- */
-  function loadPack(p) {
+  function loadPack(p, opts) {
+    opts = opts || {};
     const ingested = Pack.ingestPack(p);
-    if (!ingested.ok) {
+    // Server packs are answer-stripped (the answers never leave the backend),
+    // so the client validator — which requires answers — would reject them.
+    // They are already validated server-side on publish, hence `trusted`.
+    if (!ingested.ok && !opts.trusted) {
       const first = ingested.issues.find(i => i.level === "error");
       showError("Pack has errors. " + (first ? first.message : ""));
       return;
@@ -1185,8 +1189,12 @@
            confusing. */
         if ((ap.status === "correct" || ap.status === "incorrect") && currentController.highlight) {
           try {
-            const re = Marker.mark(act, ap.response);
-            currentController.highlight(re.per_part);
+            // Prefer the stored per-part (saved when checked). Only re-mark as
+            // a fallback when offline — in server mode the browser has no
+            // answers to mark with.
+            let pp = ap.per_part;
+            if (!pp && !Server.enabled) pp = Marker.mark(act, ap.response).per_part;
+            if (pp) currentController.highlight(pp);
           } catch (e) {}
         }
       } catch (e) {
@@ -1268,12 +1276,70 @@
       "Saved automatically. Your teacher can see this when you export your progress."));
   }
 
+  /* Server-marking client (api_client). Off unless a pack was loaded from
+     the backend (?code=/?pack=), in which case marking is the single source
+     of truth on the server and answers never reach the browser. */
+  const Server = {
+    enabled: false,
+    context: null,                       // { code } or { pack_id }
+    async mark(act, resp) {
+      const body = Object.assign({ activity_id: act.id, response: resp }, this.context);
+      const r = await fetch("/api/v1/attempts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        cache: "no-cache"
+      });
+      if (!r.ok) throw new Error("Marking failed (" + r.status + ")");
+      return r.json();
+    },
+    async loadByCode(code) {
+      const r = await fetch("/api/v1/codes/" + encodeURIComponent(code), { cache: "no-cache" });
+      if (!r.ok) throw new Error("Code not found");
+      const data = await r.json();
+      this.enabled = true; this.context = { code: String(code) };
+      return data.pack;
+    },
+    async loadPlay(packId) {
+      const r = await fetch("/api/v1/packs/" + encodeURIComponent(packId) + "/play", { cache: "no-cache" });
+      if (!r.ok) throw new Error("Pack not found");
+      const data = await r.json();
+      this.enabled = true; this.context = { pack_id: String(packId) };
+      return data.pack;
+    }
+  };
+  PyQuiz.Server = Server;
+
+  /* Marking indirection. In server mode this returns a Promise<MarkResult>;
+     offline it runs the JS marker synchronously, so the offline single-file
+     build and the jsdom regression are byte-for-byte unchanged. */
+  function markActivity(act, resp) {
+    if (Server.enabled) return Server.mark(act, resp);
+    return Marker.mark(act, resp);
+  }
+
   function doCheck(act) {
     if (!currentController) return;
     const resp = currentController.getResponse();
-    const result = Marker.mark(act, resp);
+    const marked = markActivity(act, resp);
+    if (marked && typeof marked.then === "function") {
+      marked
+        .then(result => applyCheckResult(act, resp, result))
+        .catch(err => {
+          A11y.announceAssertive("Couldn't reach the marking server.");
+          showError("Marking failed: " + (err && err.message ? err.message : err));
+        });
+    } else {
+      applyCheckResult(act, resp, marked);
+    }
+  }
+
+  function applyCheckResult(act, resp, result) {
     const ap = progress.activities[act.id];
     ap.response = resp;
+    // Keep the server's per-part detail so re-entry can replay the highlight
+    // without re-marking (in server mode the browser has no answers to mark).
+    ap.per_part = result.per_part;
     ap.attempts = (ap.attempts || 0) + 1;
     /* Two-attempt model: after `attempts_per_activity` wrong checks, the
        activity is "failed" (red ✗, no points, solution shown). 0 means
@@ -1592,6 +1658,9 @@
      student's wrong value is replaced so the chart now shows the correct
      completed diagram. */
   function fillFlowchartSolution(act) {
+    // In server mode the pack is answer-stripped — there are no canonical
+    // answers to fill in, so skip rather than show empty "correct" boxes.
+    if (Server.enabled) return;
     const body = document.querySelector(".activity-body");
     if (!body) return;
     const blanks = (act.payload && act.payload.blanks) || [];
@@ -2112,6 +2181,25 @@
     bindKeyboardShortcuts();
     // Sync persisted help-section preference into local state.
     helpCollapsed = Settings.get().show_help === false;
+    // Server-hosted entry: ?code=NNNNNN (join by six-digit code) or ?pack=<id>
+    // (open a pack directly). Either loads the answer-stripped pack from the
+    // backend and switches marking to the server.
+    const params = new URLSearchParams(location.search);
+    const joinCode = params.get("code");
+    const playPackId = params.get("pack");
+    if (joinCode || playPackId) {
+      try {
+        const stripped = joinCode
+          ? await Server.loadByCode(joinCode)
+          : await Server.loadPlay(playPackId);
+        loadPack(stripped, { trusted: true });
+        return;
+      } catch (e) {
+        showError("Couldn't load from the server: " + (e && e.message ? e.message : e));
+        showLoader();
+        return;
+      }
+    }
     if (location.hash && location.hash.startsWith("#pack=")) {
       const encoded = decodeURIComponent(location.hash.slice(6));
       if (encoded.length > 8192) {

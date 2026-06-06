@@ -26,9 +26,16 @@
        for the marker. The renderer itself doesn't care about
        acceptedOrderings — the marker does — but we still pull them
        through expand() so we have a single conversion path. */
-    const expanded = (PyQuiz.Parsons && PyQuiz.Parsons.expand)
-      ? PyQuiz.Parsons.expand(p)
-      : { lines: p.lines || [], indentSize: p.indent_size_spaces || 4, discardRequired: p.discard_required !== false };
+    // Server packs arrive answer-stripped: pre-shuffled `lines` (id/code/
+    // indent/distractor) with NO canonical_code, so the order can't be
+    // reconstructed in the browser. Render from those directly; otherwise
+    // expand the authoring form. canonicalIds is unknown for stripped packs
+    // (that's the answer) — left empty; the server marks the order.
+    const expanded = (Array.isArray(p.lines) && p.lines.length)
+      ? { lines: p.lines, canonicalIds: [], indentSize: p.indent_size_spaces || 4, discardRequired: p.discard_required !== false }
+      : (PyQuiz.Parsons && PyQuiz.Parsons.expand)
+        ? PyQuiz.Parsons.expand(p)
+        : { lines: p.lines || [], canonicalIds: [], indentSize: p.indent_size_spaces || 4, discardRequired: p.discard_required !== false };
     const lines = expanded.lines;
     const indentPx = expanded.indentSize * 8;
 
