@@ -1,0 +1,8 @@
+/* Welcome screen (no pack loaded): hide the drawer, carousel and bottom
+   bar so the loader fills the work area cleanly. */
+body.welcome-mode .sk-drawer,
+body.welcome-mode .sk-carousel,
+body.welcome-mode .sk-bar,
+body.welcome-mode .sk-handle{display:none!important}
+body.welcome-mode .sk-body{grid-template-columns:1fr}
+body.welcome-mode .sk-work{background-image:none}

@@ -37,7 +37,20 @@
   --letter: 0.02em;
   --font-body: "Atkinson Fallback", "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", "Open Sans", Verdana, sans-serif;
   --font-mono: ui-monospace, "Cascadia Mono", "SF Mono", "Source Code Pro", Consolas, monospace;
+
+  /* ---- "skin" palette — mirrors student.html so the shared activity skin
+     (integration/activity-skin.css) renders the preview identically. ---- */
+  --font-display: "Bricolage Grotesque", var(--font-body);
+  --sk-paper:#FFFDF8; --sk-line:#EAE3D6; --sk-line2:#DAD2C2;
+  --sk-green:#2F9E63; --sk-green-ink:#1E6B43; --sk-green-soft:#E5F4EB;
+  --sk-red:#C2452F; --sk-red-soft:#FBEAE6;
+  --sk-sel:#6C4DC4; --sk-sel-ink:#523499; --sk-sel-soft:#EEE8FA; --sk-sel-line:#D9CCF2;
+  --sk-amber:#D9A93B; --sk-amber-soft:#FBF3DD; --sk-amber-ink:#7A5B11;
 }
+
+/* Skin palette theme overrides (mirror student.html). */
+[data-theme="dark"]{--sk-paper:#26262B;--sk-line:#34343A;--sk-line2:#44444C;--sk-green-soft:#1E3A2C;--sk-sel-soft:#2E2640;--sk-sel-line:#4A3D72;--sk-amber-soft:#3A2F12;--sk-red-soft:#3A201B}
+[data-theme="hc"]{--sk-paper:#000;--sk-line:#FFEC3D;--sk-line2:#FFEC3D;--sk-sel:#FFEC3D;--sk-sel-ink:#FFEC3D;--sk-sel-soft:#000;--sk-sel-line:#FFEC3D;--sk-green:#3DFF7A;--sk-green-soft:#000;--sk-amber-soft:#000}
 
 /* HIGH CONTRAST: yellow on black, real contrast not pastel */
 [data-theme="hc"] {

@@ -10,6 +10,121 @@
 <link rel="stylesheet" href="css/css__base.css">
 <link rel="stylesheet" href="css/css__activities.css">
 <link rel="stylesheet" href="css/css__editor.css">
+
+<!-- Activity skin: single source integration/activity-skin.css, injected into
+     BOTH apps by integration/apply.py so the teacher preview renders activities
+     identically to the student player. Loaded last so it overrides base CSS. -->
+<style id="pq-skin">
+/* ============================================================
+   ACTIVITY SKIN — single source of truth.
+
+   Restyles the real renderer output to the mockup visual language
+   (window code cards, consistent zone widths, output/bin/options/
+   word-bank, tables, cloze blanks, flowchart). Scoped to `.sk`.
+
+   This file is injected verbatim into BOTH student.html and
+   teacher.html by integration/apply.py (into the <style id="pq-skin">
+   element), so the player and the authoring preview render activities
+   identically and can never drift. Edit here, then rebuild.
+
+   It relies on the host page providing the --sk-* palette tokens and
+   the base renderer CSS; only --zw is owned here.
+   ============================================================ */
+.sk{--zw:30rem}
+/* Centre the activity column in the work area. */
+.sk .sk-work .activity-wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:22px}
+.sk .sk-work .activity-body{width:100%;background:transparent;border:none;box-shadow:none;padding:0;margin:0;display:flex;flex-direction:column;align-items:center;gap:20px}
+.sk .sk-work .activity-body>*{width:100%;max-width:var(--zw)}
+.sk .sk-work .po,.sk .sk-work .parsons,.sk .sk-work .cloze,.sk .sk-work .trace-table-wrap,.sk .sk-work .flowchart-activity,.sk .sk-work .testing-activity{display:flex;flex-direction:column;align-items:center;gap:16px;width:100%}
+/* Section sub-labels above zones (Code / Output / etc.) */
+.sk .sk-work h3{font-family:var(--font-mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0 0 2px;align-self:flex-start;width:min(var(--zw),100%)}
+
+/* ---- code as a "window" card (the .sk-window wrapper is the frame) ---- */
+.sk .sk-work .sk-window{width:min(var(--zw),100%);background:#F4EFE6;border:1px solid var(--sk-line2);border-radius:14px;overflow:hidden;
+  box-shadow:0 2px 0 rgba(40,30,10,.04),0 18px 40px -22px rgba(40,30,10,.4)}
+.sk .sk-work .sk-window>.code-block,
+.sk .sk-work .sk-window>.cloze-code,
+.sk .sk-work .sk-window>.stb-code,
+.sk .sk-work .sk-window>.parsons-area[data-area="program"]{
+  width:100%;background:transparent;border:none;border-radius:0;box-shadow:none;padding:0;margin:0}
+.sk .sk-work .code-block pre{padding:14px 18px;font-size:1.02rem;line-height:1.85;white-space:pre;overflow-x:auto;margin:0}
+[data-theme="dark"] .sk .sk-work .sk-window{background:#1F1F24}
+
+/* Injected window title bar: filename + copy icon (left), coloured dots (right) */
+.sk .sk-winbar{display:flex;align-items:center;gap:8px;height:38px;padding:0 14px;background:#ECE6DA;border-bottom:1px solid var(--sk-line2);font-family:var(--font-mono);font-size:.74rem;color:var(--muted)}
+.sk .sk-winbar .fname{font-weight:700;color:var(--fg)}
+.sk .sk-winbar .sk-copy{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;border:1px solid var(--sk-line2);background:var(--bg);color:var(--muted);cursor:pointer;font-size:.8rem;line-height:1;padding:0}
+.sk .sk-winbar .sk-copy:hover{border-color:var(--sk-sel);color:var(--sk-sel)}
+.sk .sk-winbar .sk-copy.copied{border-color:var(--sk-green);color:var(--sk-green-ink)}
+.sk .sk-winbar .dots{margin-left:auto;display:flex;gap:6px}
+.sk .sk-winbar .dots i{width:11px;height:11px;border-radius:50%}
+.sk .sk-winbar .dots i:nth-child(1){background:#E0584B}
+.sk .sk-winbar .dots i:nth-child(2){background:#E6B23C}
+.sk .sk-winbar .dots i:nth-child(3){background:#46B36B}
+[data-theme="dark"] .sk .sk-winbar{background:#2A2A30}
+[data-theme="hc"] .sk .sk-winbar .dots i{outline:1px solid #FFEC3D}
+
+/* ---- predict: output box + MC options ---- */
+.sk .sk-work .po-free{width:min(var(--zw),100%);display:flex;flex-direction:column;gap:6px}
+.sk .sk-work .po-free label{font-family:var(--font-mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.sk .sk-work .po-input{width:100%;font-family:var(--font-mono);font-size:1.04rem;line-height:1.85;background:#FFFEFB;border:2px solid var(--sk-green);border-radius:13px;padding:14px 18px;min-height:120px;
+  box-shadow:inset 0 0 0 4px var(--sk-green-soft);outline:none;resize:vertical}
+[data-theme="dark"] .sk .sk-work .po-input{background:#1F1F24;box-shadow:inset 0 0 0 4px var(--sk-green-soft)}
+.sk .sk-work .po-options{width:min(var(--zw),100%);display:flex;flex-direction:column;gap:10px}
+.sk .sk-work .po-options-legend{font-family:var(--font-mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0 0 2px}
+.sk .sk-work .po-option{display:flex;align-items:center;gap:12px;text-align:left;background:#FFFEFB;border:1.5px solid var(--sk-line2);border-radius:11px;padding:12px 14px;cursor:pointer;width:100%}
+.sk .sk-work .po-option:hover{border-color:var(--sk-sel-line)}
+.sk .sk-work .po-option.selected{border-color:var(--sk-sel);box-shadow:0 0 0 3px var(--sk-sel-soft)}
+.sk .sk-work .po-option-code{margin:0;font-family:var(--font-mono);font-size:1rem;white-space:pre;background:transparent;border:none;padding:0}
+[data-theme="dark"] .sk .sk-work .po-option{background:#1F1F24}
+
+/* ---- parsons: program window + bin same width ---- */
+.sk .sk-work .parsons-areas{width:min(var(--zw),100%);display:flex;flex-direction:column;gap:14px}
+.sk .sk-work .parsons-area.parsons-bin{width:100%;border-radius:12px;border:1.5px dashed var(--sk-line2);background:#FBF9F4;padding:14px}
+/* The program area is framed as a code window; hide its "Program" heading
+   (the injected window title bar replaces it) and pad the block list. */
+.sk .sk-work .parsons-area[data-area="program"]>h3{display:none}
+.sk .sk-work .parsons-area[data-area="program"] .parsons-list{padding:14px}
+.sk .sk-work .parsons-area.drag-over{background:var(--sk-sel-soft);border-color:var(--sk-sel-line)}
+.sk .sk-work .parsons-block{background:#FFFEFB;border:1.5px solid var(--sk-line2);border-radius:11px;padding:13px 15px;font-family:var(--font-mono);font-size:1.02rem}
+.sk .sk-work .parsons-block.selected{border-color:var(--sk-sel);box-shadow:0 0 0 2px var(--sk-sel-soft);background:var(--sk-sel-soft)}
+.sk .sk-work .parsons-block.drop-above{box-shadow:0 3px 0 var(--sk-sel) inset}
+.sk .sk-work .parsons-block.drop-below{box-shadow:0 -3px 0 var(--sk-sel) inset}
+[data-theme="dark"] .sk .sk-work .parsons-block{background:#1F1F24}
+/* ---- bug/modify code window ---- */
+.sk .sk-work .stb-code{list-style:none;margin:0;padding:14px;font-family:var(--font-mono);font-size:1.02rem;line-height:1.7}
+.sk .sk-work .sk-window>.stb-code{padding:14px}
+/* Remove-line: the program list is the window; the Bin is a dashed
+   Parsons-style frame with NO title bar, sitting below it. */
+.sk .sk-work .stb-remove-bin-section{width:min(var(--zw),100%);margin-top:14px}
+.sk .sk-work .stb-remove-bin-label{font-family:var(--font-mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:8px}
+.sk .sk-work .stb-remove-bin{list-style:none;margin:0;padding:14px;width:100%;border:1.5px dashed var(--sk-line2);border-radius:12px;background:#FBF9F4;min-height:56px}
+[data-theme="dark"] .sk .sk-work .stb-remove-bin{background:#1F1F24}
+.sk .sk-work .stb-bin-empty{color:var(--muted);font-family:var(--font-mono);font-size:.92rem;text-align:center}
+
+/* ---- cloze: blanks + word bank ---- */
+.sk .sk-work .cloze-code,.sk .sk-work .sk-window>.cloze-code{font-family:var(--font-mono);font-size:1.02rem;line-height:1.9;padding:14px 18px}
+.sk .sk-work .cloze-code .code-row{padding:0}
+.sk .sk-work .blank-text,.sk .sk-work .blank-select,.sk .sk-work .blank-bank,.sk .sk-work .blank-pool{display:inline-flex;align-items:center;justify-content:center;min-width:46px;height:30px;padding:0 8px;border-radius:7px;border:2px dashed var(--sk-sel-line);background:var(--sk-sel-soft);color:var(--sk-sel-ink);font-weight:700}
+.sk .sk-work .blank-text.filled,.sk .sk-work .blank-bank.filled,.sk .sk-work .blank-pool.filled{border-style:solid;background:#fff}
+.sk .sk-work .cloze-pool{width:min(var(--zw),100%);display:flex;flex-wrap:wrap;gap:10px;border:none;background:transparent;padding:0}
+.sk .sk-work .cloze-pool .chip{padding:9px 15px;border-radius:10px;border:1.5px solid var(--sk-line2);background:#FFFEFB;font-family:var(--font-mono);font-size:1rem}
+.sk .sk-work .cloze-pool .chip.used{opacity:.35}
+[data-theme="dark"] .sk .sk-work .cloze-code{background:#1F1F24}
+
+/* ---- trace + testing tables ---- */
+.sk .sk-work .trace-table-wrap{width:min(var(--zw),100%);overflow:auto}
+.sk .sk-work .trace-table,.sk .sk-work .testing-table{width:100%;border-collapse:separate;border-spacing:0;font-family:var(--font-mono);font-size:.9rem;background:var(--sk-paper);border:1px solid var(--sk-line2);border-radius:12px;overflow:hidden}
+.sk .sk-work .trace-table th,.sk .sk-work .testing-table th{background:var(--sk-sel);color:#fff;font-family:var(--font-display);font-size:.8rem;text-align:left;padding:9px 10px}
+.sk .sk-work .trace-table td,.sk .sk-work .testing-table td{border-top:1px solid var(--sk-line);border-left:1px solid var(--sk-line);padding:8px 10px}
+.sk .sk-work .trace-table td:first-child,.sk .sk-work .testing-table td:first-child{border-left:none}
+
+/* ---- flowchart fills the column nicely ---- */
+.sk .sk-work .flowchart-activity,.sk .sk-work .flowchart-svg{width:100%;max-width:none}
+
+/* On wider screens give code/tables a little more breathing room. */
+@media (min-width:1100px){ .sk{--zw:34rem} }
+</style>
 </head>
 <body>
 <div class="skip"><a href="#main-region" class="skip-link">Skip to main content</a></div>
@@ -23,6 +138,7 @@
       </svg>
       <span class="brand-word">PyQuiz</span>
     </a>
+    <a href="/teacher/dashboard" id="dashboard-link" class="btn" hidden style="text-decoration:none" title="Back to your dashboard">← Dashboard</a>
     <span class="save-status" id="save-status">Saved</span>
     <div class="right toolbar">
       <button class="btn icon" id="new-btn" aria-label="New pack" title="New — start a blank pack">
@@ -136,6 +252,82 @@
 
 <!-- App -->
 <script src="js/js__apps__teacher.js"></script>
+
+<!-- Shared activity-skin decorator: single source integration/skin.js, injected
+     by apply.py into BOTH apps. Defines PyQuiz.Skin.decorate. -->
+<script id="pq-skin-js">
+/* === Activity skin — window-chrome decoration. Single source of truth. ===
+ *
+ * PyQuiz.Skin.decorate(root, opts) wraps every code element under `root` in a
+ * .sk-window frame with a .sk-winbar title bar (filename + copy icon + the
+ * three coloured dots). It is injected verbatim into BOTH student.html and
+ * teacher.html by integration/apply.py (into <script id="pq-skin-js">), so the
+ * player and the authoring preview build identical code boxes and never drift.
+ *
+ *   opts.getCode() -> string   the code to put on the clipboard for a box.
+ *                              Falls back to the visible text when omitted.
+ *
+ * Depends only on PyQuiz.DOM, so it is self-contained across both apps.
+ */
+(function () {
+  const PyQuiz = (window.PyQuiz = window.PyQuiz || {});
+  const Skin = (PyQuiz.Skin = PyQuiz.Skin || {});
+
+  /* Give every code box a window: a frame (.sk-window) holding a title bar
+     (filename + copy icon + coloured dots) above the code element. The bar is
+     a SIBLING of the code element, so renderers that rebuild their code (e.g.
+     remove-line) don't wipe it. The remove-line Bin is excluded — it is styled
+     as a dashed Parsons-style bin instead. */
+  function decorate(root, opts) {
+    if (!root) return;
+    opts = opts || {};
+    const DOM = PyQuiz.DOM;
+    const getCode = typeof opts.getCode === "function" ? opts.getCode : function () { return ""; };
+    const sel = '.code-block, .cloze-code, .parsons-area[data-area="program"], .stb-code:not(.stb-remove-bin)';
+    root.querySelectorAll(sel).forEach(function (el) {
+      if (el.parentElement && el.parentElement.classList.contains("sk-window")) return;
+      const win = DOM.el("div", { class: "sk-window" });
+      const bar = DOM.el("div", { class: "sk-winbar" });
+      bar.appendChild(DOM.el("span", { class: "fname" }, "main.py"));
+      const copy = DOM.el("button", { type: "button", class: "sk-copy", "aria-label": "Copy code", title: "Copy code" }, "⧉");
+      copy.addEventListener("click", function () { copyCode(el, copy, getCode); });
+      bar.appendChild(copy);
+      const dots = DOM.el("span", { class: "dots", "aria-hidden": "true" });
+      dots.appendChild(DOM.el("i")); dots.appendChild(DOM.el("i")); dots.appendChild(DOM.el("i"));
+      bar.appendChild(dots);
+      el.parentNode.insertBefore(win, el);
+      win.appendChild(bar);
+      win.appendChild(el);
+    });
+  }
+
+  async function copyCode(el, btn, getCode) {
+    // Prefer the caller's assembled/canonical code; fall back to the visible
+    // text in this window (minus the title bar + line gutters).
+    let code = "";
+    try { code = getCode() || ""; } catch (e) {}
+    if (!code) {
+      const clone = el.cloneNode(true);
+      const wb = clone.querySelector(".sk-winbar"); if (wb) wb.remove();
+      clone.querySelectorAll(".code-ln, .stb-gutter, .line-num").forEach(function (g) { g.remove(); });
+      code = clone.textContent.replace(/\n{3,}/g, "\n\n").trim();
+    }
+    if (!code) return;
+    try { await navigator.clipboard.writeText(code); }
+    catch (e) {
+      const ta = document.createElement("textarea");
+      ta.value = code; document.body.appendChild(ta);
+      ta.select(); try { document.execCommand("copy"); } catch (er) {}
+      document.body.removeChild(ta);
+    }
+    const prev = btn.textContent;
+    btn.textContent = "✓"; btn.classList.add("copied");
+    setTimeout(function () { btn.textContent = prev; btn.classList.remove("copied"); }, 1200);
+  }
+
+  Skin.decorate = decorate;
+})();
+</script>
 </body>
 </html>
 

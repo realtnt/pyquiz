@@ -1214,7 +1214,7 @@
     }
 
     main.appendChild(wrap);
-    try { decorateCodeWindows(main, act); } catch (e) {}
+    try { if (PyQuiz.Skin) PyQuiz.Skin.decorate(main, { getCode: function () { return skinCodeForCopy(act); } }); } catch (e) {}
     /* Lock the body AFTER it is in the DOM (lockActivityBody queries the
        document). Once correct or out of attempts, the activity can't be
        edited again. */
@@ -2102,55 +2102,18 @@
     document.getElementById("info-scrim").classList.add("on");
   }
 
-  /* Give every code box a window: a frame (.sk-window) holding a title bar
-     (filename + copy icon + coloured dots) above the code element. The bar
-     is a SIBLING of the code element, so renderers that rebuild their code
-     (e.g. remove-line) don't wipe it. The remove-line Bin is excluded — it
-     is styled as a dashed Parsons-style bin instead. */
-  function decorateCodeWindows(root, act) {
-    const sel = '.code-block, .cloze-code, .parsons-area[data-area="program"], .stb-code:not(.stb-remove-bin)';
-    root.querySelectorAll(sel).forEach(el => {
-      if (el.parentElement && el.parentElement.classList.contains("sk-window")) return;
-      const win = DOM.el("div", { class: "sk-window" });
-      const bar = DOM.el("div", { class: "sk-winbar" });
-      bar.appendChild(DOM.el("span", { class: "fname" }, "main.py"));
-      const copy = DOM.el("button", { type: "button", class: "sk-copy", "aria-label": "Copy code", title: "Copy code" }, "⧉");
-      copy.addEventListener("click", () => copyActivityCode(act, el, copy));
-      bar.appendChild(copy);
-      const dots = DOM.el("span", { class: "dots", "aria-hidden": "true" });
-      dots.appendChild(DOM.el("i")); dots.appendChild(DOM.el("i")); dots.appendChild(DOM.el("i"));
-      bar.appendChild(dots);
-      el.parentNode.insertBefore(win, el);
-      win.appendChild(bar);
-      win.appendChild(el);
-    });
-  }
-
-  async function copyActivityCode(act, el, btn) {
-    // Prefer the activity's canonical/assembled code; fall back to the
-    // visible text in this window (minus the title bar + line gutters).
-    let code = "";
+  /* Code-box "windows" are decorated by the shared PyQuiz.Skin module
+     (integration/skin.js, injected by apply.py) so the player and the teacher
+     preview build identical chrome. The clipboard prefers this activity's
+     assembled/canonical code, falling back to the visible text. */
+  function skinCodeForCopy(act) {
     try {
       if (currentController && currentController.getResponse && PyQuiz.Code && PyQuiz.Code.assemble) {
-        code = PyQuiz.Code.assemble(act, currentController.getResponse());
+        return PyQuiz.Code.assemble(act, currentController.getResponse());
       }
     } catch (e) {}
-    if (!code) { try { code = (PyQuiz.Code && PyQuiz.Code.codeForCopy) ? PyQuiz.Code.codeForCopy(act) : ""; } catch (e) {} }
-    if (!code) {
-      const clone = el.cloneNode(true);
-      const wb = clone.querySelector(".sk-winbar"); if (wb) wb.remove();
-      clone.querySelectorAll(".code-ln, .stb-gutter, .line-num").forEach(g => g.remove());
-      code = clone.textContent.replace(/\n{3,}/g, "\n\n").trim();
-    }
-    if (!code) return;
-    try { await navigator.clipboard.writeText(code); }
-    catch (e) {
-      const ta = document.createElement("textarea"); ta.value = code; document.body.appendChild(ta);
-      ta.select(); try { document.execCommand("copy"); } catch (er) {} document.body.removeChild(ta);
-    }
-    const prev = btn.textContent;
-    btn.textContent = "✓"; btn.classList.add("copied");
-    setTimeout(() => { btn.textContent = prev; btn.classList.remove("copied"); }, 1200);
+    try { return (PyQuiz.Code && PyQuiz.Code.codeForCopy) ? PyQuiz.Code.codeForCopy(act) : ""; } catch (e) {}
+    return "";
   }
 
 

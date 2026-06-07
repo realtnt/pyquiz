@@ -512,6 +512,56 @@
     renderStudentPreview(act, stage);
   }
 
+  /* When hosted (served over http/https), preview marking routes through the
+     server so it uses the exact Python marker a student hits — the single
+     source of truth (D1). Opened offline as a single file (file://), or if the
+     request fails, it falls back to the in-page JS marker, which the parity
+     harness proves byte-identical. So the teacher always sees what the student
+     would, whichever way the tool is run. */
+  const Server = {
+    enabled: (location.protocol === "http:" || location.protocol === "https:"),
+    async previewMark(act, resp) {
+      const r = await fetch("/api/v1/preview/mark", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ activity: act, response: resp }),
+        cache: "no-cache"
+      });
+      if (!r.ok) throw new Error("Preview marking failed (" + r.status + ")");
+      return r.json();
+    }
+  };
+  PyQuiz.Server = Server;
+
+  function previewMarkActivity(act, resp) {
+    if (Server.enabled) return Server.previewMark(act, resp).catch(() => Marker.mark(act, resp));
+    return Marker.mark(act, resp);
+  }
+
+  /* Render the preview inside the same .sk/.sk-work context as the student
+     player so the shared activity skin (code-box windows, restyled widgets)
+     applies identically. Returns the .activity-body to render into; call
+     decoratePreview() afterwards to add the window chrome. */
+  function skinPreviewHost(parent) {
+    const sk = DOM.el("div", { class: "sk" });
+    const work = DOM.el("div", { class: "sk-work" });
+    const wrap = DOM.el("div", { class: "activity-wrap" });
+    const ab = DOM.el("div", { class: "activity-body" });
+    wrap.appendChild(ab); work.appendChild(wrap); sk.appendChild(work);
+    parent.appendChild(sk);
+    return ab;
+  }
+  function decoratePreview(ab, act, ctrl) {
+    try {
+      if (!PyQuiz.Skin) return;
+      PyQuiz.Skin.decorate(ab, { getCode: function () {
+        try { if (ctrl && ctrl.getResponse && PyQuiz.Code && PyQuiz.Code.assemble) return PyQuiz.Code.assemble(act, ctrl.getResponse()); } catch (e) {}
+        try { return (PyQuiz.Code && PyQuiz.Code.codeForCopy) ? PyQuiz.Code.codeForCopy(act) : ""; } catch (e) {}
+        return "";
+      } });
+    } catch (e) {}
+  }
+
   /* Student-view preview (read-only-ish: interactions work but aren't saved). */
   function renderStudentPreview(act, stage) {
     const issues = (PyQuiz.Validator && PyQuiz.Validator.activity)
@@ -523,8 +573,7 @@
     if (Renderers.ioPanel) {
       try { const io = Renderers.ioPanel.build(act); if (io) stage.appendChild(io); } catch (e) {}
     }
-    const ab = DOM.el("div", { class: "activity-body" });
-    stage.appendChild(ab);
+    const ab = skinPreviewHost(stage);
     try {
       if (Renderers.has(act.type)) _previewCtrl = Renderers.render(act, ab, {});
       else ab.appendChild(DOM.el("p", { class: "kbd-help" }, "No preview renderer for this type."));
@@ -535,15 +584,21 @@
         DOM.el("pre", { class: "render-error-detail" }, String(e && e.message || e))));
     }
     if (_previewCtrl) {
+      decoratePreview(ab, act, _previewCtrl);
       const ctrls = DOM.el("div", { class: "live-preview-controls" });
       const fb = DOM.el("span");
       const check = DOM.button(S.check, () => {
-        try {
-          const r = Marker.mark(act, _previewCtrl.getResponse());
+        const apply = (r) => {
           fb.textContent = r.feedback || "";
           fb.style.color = r.status === "correct" ? "var(--ok)" : "var(--bad)";
           if (_previewCtrl.highlight) _previewCtrl.highlight(r.per_part);
-        } catch (e) { fb.textContent = "Could not check: " + (e.message || e); fb.style.color = "var(--bad)"; }
+        };
+        const fail = (e) => { fb.textContent = "Could not check: " + (e.message || e); fb.style.color = "var(--bad)"; };
+        try {
+          const marked = previewMarkActivity(act, _previewCtrl.getResponse());
+          if (marked && typeof marked.then === "function") marked.then(apply).catch(fail);
+          else apply(marked);
+        } catch (e) { fail(e); }
       }, "primary");
       const reset = DOM.button(S.reset, () => { if (_previewCtrl.reset) _previewCtrl.reset(); fb.textContent = ""; });
       ctrls.appendChild(check); ctrls.appendChild(reset); ctrls.appendChild(fb);
@@ -2264,17 +2319,24 @@
       if (io) body.appendChild(io);
     }
 
-    const ab = DOM.el("div", { class: "activity-body" });
-    body.appendChild(ab);
+    const ab = skinPreviewHost(body);
     const ctrl = Renderers.render(act, ab, {});
+    decoratePreview(ab, act, ctrl);
 
     const row = DOM.el("div", { class: "footer-actions" });
     const fb = DOM.el("span", { style: "margin-left:10px" });
     const check = DOM.button(S.check, () => {
-      const r = Marker.mark(act, ctrl.getResponse());
-      fb.textContent = r.feedback;
-      fb.style.color = r.status === "correct" ? "var(--ok)" : "var(--bad)";
-      if (ctrl.highlight) ctrl.highlight(r.per_part);
+      const apply = (r) => {
+        fb.textContent = r.feedback || "";
+        fb.style.color = r.status === "correct" ? "var(--ok)" : "var(--bad)";
+        if (ctrl.highlight) ctrl.highlight(r.per_part);
+      };
+      const fail = (e) => { fb.textContent = "Could not check: " + (e.message || e); fb.style.color = "var(--bad)"; };
+      try {
+        const marked = previewMarkActivity(act, ctrl.getResponse());
+        if (marked && typeof marked.then === "function") marked.then(apply).catch(fail);
+        else apply(marked);
+      } catch (e) { fail(e); }
     }, "primary");
     const reset = DOM.button(S.reset, () => { if (ctrl.reset) ctrl.reset(); fb.textContent = ""; });
     row.appendChild(check);
@@ -2426,20 +2488,59 @@
     document.getElementById("settings-btn").addEventListener("click", () => Settings.openDialog());
   }
 
+  /* Open a built-in pack as the teacher's OWN editable copy: a fresh id (so it
+     never collides with the original or another teacher's), a "(copy)" title
+     and no author. This is the seam the dashboard "load an existing one to
+     edit" uses; later it will clone a server pack with the teacher as owner. */
+  function loadBuiltInCopy(id) {
+    const src = PyQuiz.BuiltInPacks && PyQuiz.BuiltInPacks.get(id);
+    if (!src) return null;
+    const copy = Pack.blank();          // fresh id + timestamps
+    const newId = copy.id;
+    Object.assign(copy, JSON.parse(JSON.stringify(src)));
+    copy.id = newId;                    // keep the new id, not the source's
+    copy.title = (src.title || "Pack") + " (copy)";
+    copy.author = "";
+    return copy;
+  }
+
   /* ---- Init ---- */
   function init() {
     bindTopBar();
+    // The dashboard only exists when hosted by the backend; reveal the link
+    // there and leave it hidden in the offline single-file build.
+    if (Server.enabled) {
+      const dl = document.getElementById("dashboard-link");
+      if (dl) dl.hidden = false;
+    }
     if (Storage.mode() === "memory") {
       const b = document.getElementById("storage-banner");
       if (b) { b.hidden = false; b.textContent = S.storageBannerTeacher; }
     }
-    const lastId = Storage.get("pyquiz.v1.teacher.lastOpen");
     const drafts = Storage.get("pyquiz.v1.teacher.drafts") || {};
-    if (lastId && drafts[lastId]) {
-      pack = drafts[lastId];
-    } else {
+    // The dashboard opens packs via query params: ?new (blank), ?draft=<id>
+    // (resume one of mine) or ?load=<builtin-id> (start from a built-in copy).
+    const params = new URLSearchParams(location.search);
+    const wantDraft = params.get("draft");
+    const wantLoad = params.get("load");
+    const wantNew = params.get("new");
+    if (wantLoad) {
+      pack = loadBuiltInCopy(wantLoad) || Pack.blank();
+      saveDraft(true);
+    } else if (wantDraft && drafts[wantDraft]) {
+      pack = drafts[wantDraft];
+      Storage.set("pyquiz.v1.teacher.lastOpen", pack.id);
+    } else if (wantNew) {
       pack = Pack.blank();
       saveDraft(true);
+    } else {
+      const lastId = Storage.get("pyquiz.v1.teacher.lastOpen");
+      if (lastId && drafts[lastId]) pack = drafts[lastId];
+      else { pack = Pack.blank(); saveDraft(true); }
+    }
+    // Drop the query string so a refresh won't re-clone or re-blank the pack.
+    if ((wantLoad || wantDraft || wantNew) && window.history && history.replaceState) {
+      history.replaceState(null, "", location.pathname);
     }
     const s = Settings.get();
     if (s.tl === "collapsed") document.getElementById("layout").classList.add("tl-collapsed");
