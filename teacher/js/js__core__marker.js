@@ -312,6 +312,13 @@
     return result(ack ? "correct" : "incorrect", ack ? 1 : 0, { acknowledged: ack }, activity);
   };
 
+  Marker.types.theory = function (activity, response) {
+    // Non-assessed explanation. Reading it is the acknowledgement (auto-
+    // reported on view), exactly like starter_challenge.
+    const ack = !!(response && response.acknowledged);
+    return result(ack ? "correct" : "incorrect", ack ? 1 : 0, { acknowledged: ack }, activity);
+  };
+
 
   /* ----- testing activity classifier + marker -----
      The classifier infers Normal / Boundary / Erroneous from an input

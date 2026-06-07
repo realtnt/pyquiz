@@ -341,6 +341,29 @@
     if (!(p.example_calls || []).length) issues.push({ level: "warning", path: base + ".payload.example_calls", message: "At least one example call recommended." });
   };
 
+  Validator.types.theory = function (act, base, issues) {
+    const p = act.payload || {};
+    const blocks = p.blocks;
+    if (!Array.isArray(blocks) || !blocks.length) {
+      issues.push({ level: "error", path: base + ".payload.blocks", message: "Theory needs at least one block." });
+      return;
+    }
+    blocks.forEach(function (b, i) {
+      const bp = base + ".payload.blocks[" + i + "]";
+      if (!b || typeof b !== "object") { issues.push({ level: "error", path: bp, message: "Block must be an object." }); return; }
+      if (b.kind === "text") {
+        if (!String(b.text || "").trim()) issues.push({ level: "error", path: bp + ".text", message: "Text block is empty." });
+      } else if (b.kind === "code") {
+        if (!String(b.code || "").trim()) issues.push({ level: "error", path: bp + ".code", message: "Code block is empty." });
+      } else if (b.kind === "image") {
+        if (!String(b.src || "").trim()) issues.push({ level: "error", path: bp + ".src", message: "Image block needs a source." });
+        if (!String(b.alt || "").trim()) issues.push({ level: "error", path: bp + ".alt", message: "Image needs alt text (accessibility)." });
+      } else {
+        issues.push({ level: "error", path: bp + ".kind", message: "Unknown block kind: " + b.kind });
+      }
+    });
+  };
+
 
   Validator.types.testing = function (act, base, issues) {
     const p = act.payload || {};

@@ -143,6 +143,13 @@
           model_solution: "def double(n):\n    return n * 2\n",
           self_check_guidance: "Try each example call in your IDE."
         };
+      case "theory":
+        return {
+          blocks: [
+            { kind: "text", text: "Explain the idea here in a sentence or two." },
+            { kind: "code", code: "x = 5\nprint(x)\n", note: "What this line does and why." }
+          ]
+        };
       case "testing":
         return {
           code: "def is_adult(age):\n    return age >= 18\n",

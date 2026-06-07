@@ -29,7 +29,8 @@
       "predict_output",
       "starter_challenge",
       "testing",
-      "flowchart"
+      "flowchart",
+      "theory"
     ],
     /* The renderer version each activity type is CURRENTLY authored against.
        Bump a type's number by one whenever its renderer changes in a way that
@@ -38,7 +39,7 @@
        the registry falls back to the nearest older renderer for old packs. */
     CURRENT_RENDERER_VERSION: {
       parsons: 1, cloze: 1, trace_table: 1, spot_the_bug: 1, modify: 1,
-      predict_output: 1, starter_challenge: 1, testing: 1, flowchart: 1
+      predict_output: 1, starter_challenge: 1, testing: 1, flowchart: 1, theory: 1
     },
     /* Default colour-coding for each activity type. Teachers can override
        per-activity via the optional `colour` field. All chosen to meet
@@ -53,7 +54,8 @@
       predict_output:    "#7B2D6B",
       starter_challenge: "#0F6E84",
       testing:           "#5C7A2D",  /* sage green — distinct from cloze and trace */
-      flowchart:         "#5E3A9A"   /* deep purple — distinct from all other types */
+      flowchart:         "#5E3A9A",  /* deep purple — distinct from all other types */
+      theory:            "#4B5563"   /* slate — non-assessed explanation */
     },
     /* Short user-facing label for each type — used in the activity
        header badge, settings dialog, etc. Long form so it's clear in
@@ -67,7 +69,8 @@
       predict_output:    "Predict",
       starter_challenge: "Challenge",
       testing:           "Testing",
-      flowchart:         "Flowchart"
+      flowchart:         "Flowchart",
+      theory:            "Theory"
     },
     /* How each activity TYPE works (the mechanics). Shown in the help
        modal opened from the activity-type tag. The Brief pane carries the
@@ -81,7 +84,8 @@
       modify:            { icon: "🔧", text: "Change the working code so it meets the new requirement in the Brief — edit a line in place, add a new line, or remove one. The Brief says what the new behaviour should be." },
       testing:           { icon: "🧪", text: "Build a test-data table. Every row needs an Expected output, plus ONE of: a Test value (then choose its Type of test) or a Type of test (then enter a value of that kind). Complete the highlighted cells — the marker checks your value against the input's type and range." },
       flowchart:         { icon: "🔀", text: "Complete the flowchart by filling the blank shapes — some are text boxes, some are drop-downs. Use the expected output or trace in the Brief to work out the missing values." },
-      starter_challenge: { icon: "🚀", text: "An open task you complete in your own editor. Copy the starter code, write your solution, and check it against the example calls. Tick to mark it done when you're happy." }
+      starter_challenge: { icon: "🚀", text: "An open task you complete in your own editor. Copy the starter code, write your solution, and check it against the example calls. Tick to mark it done when you're happy." },
+      theory:            { icon: "📖", text: "A short explanation with worked examples. There's nothing to answer — it's marked as read once you've seen it. Read it through then move on when you're ready." }
     },
     /* 3-letter abbreviations for compact pills in the task list of both
        apps. The task-list pane is narrow and a row with a long type
@@ -96,7 +100,8 @@
       predict_output:    "pre",
       starter_challenge: "cha",
       testing:           "tst",
-      flowchart:         "flw"
+      flowchart:         "flw",
+      theory:            "thy"
     }
   };
 })();

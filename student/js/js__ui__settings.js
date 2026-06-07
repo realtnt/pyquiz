@@ -346,7 +346,8 @@
       { key: "spot_the_bug",      desc: "The code is broken. Find the line and write a fix. Targets debugging as a separate skill from writing fresh code." },
       { key: "cloze",             desc: "Fill the blanks in a code template — free text, drop-down or click-to-place from a word bank. Useful for key-term recall." },
       { key: "trace_table",       desc: "Step through code line by line, recording how each variable changes. Builds a precise mental execution model." },
-      { key: "starter_challenge", desc: "Open-ended coding task with example calls. The 'Make' step in a PRIMM journey, with optional scaffolding ladder." }
+      { key: "starter_challenge", desc: "Open-ended coding task with example calls. The 'Make' step in a PRIMM journey, with optional scaffolding ladder." },
+      { key: "theory",            desc: "A short, non-assessed explanation — prose with worked code examples and notes. The 'explain' step before students practise." }
     ];
     types.forEach(function (t) {
       const li = DOM.el("li", { class: "about-type" });

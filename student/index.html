@@ -204,6 +204,15 @@
 .sk .sk-work .trace-table td,.sk .sk-work .testing-table td{border-top:1px solid var(--sk-line);border-left:1px solid var(--sk-line);padding:8px 10px}
 .sk .sk-work .trace-table td:first-child,.sk .sk-work .testing-table td:first-child{border-left:none}
 
+/* ---- theory: explanation blocks (text / code+note / image) ---- */
+.sk .sk-work .theory{display:flex;flex-direction:column;align-items:stretch;gap:16px;width:min(var(--zw),100%)}
+.sk .sk-work .theory>*{width:100%}
+.sk .sk-work .theory-text{white-space:pre-wrap;line-height:1.6;margin:0}
+.sk .sk-work .theory-note{margin:0;font-size:.95rem;color:var(--muted);border-left:3px solid var(--sk-sel-line);padding-left:12px}
+.sk .sk-work .theory-figure{margin:0;display:flex;flex-direction:column;gap:6px}
+.sk .sk-work .theory-img{max-width:100%;border-radius:12px;border:1px solid var(--sk-line2)}
+.sk .sk-work .theory-caption{font-size:.85rem;color:var(--muted);text-align:center;margin:0}
+
 /* ---- flowchart fills the column nicely ---- */
 .sk .sk-work .flowchart-activity,.sk .sk-work .flowchart-svg{width:100%;max-width:none}
 
@@ -251,6 +260,7 @@
 <script src="js/js__renderers__spot_the_bug.js"></script>
 <script src="js/js__renderers__predict_output.js"></script>
 <script src="js/js__renderers__starter_challenge.js"></script>
+<script src="js/script-27.js"></script>
 <script src="js/js__renderers__testing.js"></script>
 <script src="js/js__renderers__flowchart.js"></script>
 

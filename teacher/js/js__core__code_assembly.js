@@ -196,6 +196,8 @@
         return p.code || "";
       case "starter_challenge":
         return p.starter_code || p.model_solution || "";
+      case "theory":
+        return (p.blocks || []).filter(b => b && b.kind === "code").map(b => b.code || "").join("\n\n");
       default:
         return "";
     }

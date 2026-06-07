@@ -7,8 +7,8 @@
       "title": "Feature tour: every activity type",
       "level": "Demo",
       "description": "Every activity type and permutation, with instructions explaining how each works.",
-      "activities": 21,
-      "sections": 9,
+      "activities": 22,
+      "sections": 10,
       "file": "feature-tour.pyquiz"
     },
     {

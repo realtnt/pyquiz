@@ -29,11 +29,12 @@
       "predict_output",
       "starter_challenge",
       "testing",
-      "flowchart"
+      "flowchart",
+      "theory"
     ],
     CURRENT_RENDERER_VERSION: {
       parsons: 1, cloze: 1, trace_table: 1, spot_the_bug: 1, modify: 1,
-      predict_output: 1, starter_challenge: 1, testing: 1, flowchart: 1
+      predict_output: 1, starter_challenge: 1, testing: 1, flowchart: 1, theory: 1
     },
     /* Default colour-coding for each activity type. Teachers can override
        per-activity via the optional `colour` field. All chosen to meet
@@ -48,7 +49,8 @@
       predict_output:    "#7B2D6B",
       starter_challenge: "#0F6E84",
       testing:           "#5C7A2D",  /* sage green — distinct from cloze and trace */
-      flowchart:         "#5E3A9A"   /* deep purple — distinct from all other types */
+      flowchart:         "#5E3A9A",  /* deep purple — distinct from all other types */
+      theory:            "#4B5563"   /* slate — non-assessed explanation */
     },
     /* Short user-facing label for each type — used in the activity
        header badge, settings dialog, etc. Long form so it's clear in
@@ -62,7 +64,8 @@
       predict_output:    "Predict",
       starter_challenge: "Challenge",
       testing:           "Testing",
-      flowchart:         "Flowchart"
+      flowchart:         "Flowchart",
+      theory:            "Theory"
     },
     /* 3-letter abbreviations for compact pills in the task list of both
        apps. The task-list pane is narrow and a row with a long type
@@ -77,7 +80,8 @@
       predict_output:    "pre",
       starter_challenge: "cha",
       testing:           "tst",
-      flowchart:         "flw"
+      flowchart:         "flw",
+      theory:            "thy"
     }
   };
 })();

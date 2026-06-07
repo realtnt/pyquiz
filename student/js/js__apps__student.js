@@ -1221,6 +1221,12 @@
     if (ap.status === "correct" || ap.status === "failed") {
       lockActivityBody(true);
     }
+    // Theory is non-assessed: reading it completes it. Mark on view so the
+    // student needn't press Check. Deferred a tick to avoid re-entering the
+    // render, and routed through doCheck so it marks via the server when hosted.
+    if (act.type === "theory" && ap.status !== "correct") {
+      setTimeout(function () { try { doCheck(act); } catch (e) {} }, 0);
+    }
     startTimer(act);
 
     // Auto-focus the first input/control so the student can start
@@ -1405,9 +1411,9 @@
       const pb = document.getElementById("play-btn");
       if (pb) pb.focus();
       // Celebrate when the student has just finished all the non-challenge
-      // activities. Challenges are independent and don't count towards
-      // 'completion' of the main pack content.
-      const nonChallenge = pack.activities.filter(a => a.type !== "starter_challenge");
+      // activities. Challenges and (non-assessed) theory are independent and
+      // don't count towards 'completion' of the main pack content.
+      const nonChallenge = pack.activities.filter(a => a.type !== "starter_challenge" && a.type !== "theory");
       const allDone = nonChallenge.length > 0 &&
         nonChallenge.every(a => (progress.activities[a.id] || {}).status === "correct");
       if (allDone && !progress._celebrated && PyQuiz.Confetti) {

@@ -391,7 +391,8 @@
       ["cloze",             "Cloze",     "Fill blanks in a code template — text, dropdown or bank."],
       ["trace_table",       "Trace",     "Step through code line by line, recording variable changes."],
       ["testing",           "Testing",   "Build a table of test cases — Normal, Boundary, Invalid and Erroneous — for a function."],
-      ["starter_challenge", "Challenge", "Open-ended coding task with starter, example calls and a model solution."]
+      ["starter_challenge", "Challenge", "Open-ended coding task with starter, example calls and a model solution."],
+      ["theory",            "Theory",    "A short, non-assessed explanation — text, code with notes and images."]
     ];
     const dlg = Modal.open({ title: S.selectActivityType, body: body, maxWidth: "780px" });
     types.forEach(([t, label, desc]) => {
@@ -1482,6 +1483,135 @@
     sc.addEventListener("input", () => { p.self_check_guidance = sc.value; onChange(); });
     scWrap.appendChild(sc);
     host.appendChild(scWrap);
+  };
+
+  /* theory: an ordered list of explanation blocks — text, code (+ note) or
+     image (src/alt/caption). Each block can move up/down and be deleted; the
+     "Add" row appends a new block of each kind. Non-assessed: no answers. */
+  LiveEditors.theory = function (act, host, onChange) {
+    const p = act.payload || (act.payload = {});
+    p.blocks = Array.isArray(p.blocks) ? p.blocks : [];
+
+    /* Read an uploaded image file into a data URI, downscaled so it doesn't
+       bloat the pack (packs live in localStorage and the DB as JSON, and the
+       offline engine inlines all assets — so the image must travel WITH the
+       pack, not as a remote link). Longest side is capped; PNGs stay PNG
+       (crisp diagrams), everything else is re-encoded as JPEG. */
+    function readImageScaled(file, cb) {
+      const MAX = 1280;
+      const reader = new FileReader();
+      reader.onerror = function () { cb(null, "Couldn't read that file."); };
+      reader.onload = function () {
+        const img = new Image();
+        img.onerror = function () { cb(null, "That doesn't look like an image."); };
+        img.onload = function () {
+          const w = img.naturalWidth, h = img.naturalHeight;
+          const scale = (w && h) ? Math.min(1, MAX / Math.max(w, h)) : 1;
+          // Small images that are already compact can pass through untouched.
+          if (scale === 1 && (reader.result || "").length < 500000) { cb(reader.result); return; }
+          try {
+            const cw = Math.max(1, Math.round(w * scale)), ch = Math.max(1, Math.round(h * scale));
+            const canvas = document.createElement("canvas");
+            canvas.width = cw; canvas.height = ch;
+            canvas.getContext("2d").drawImage(img, 0, 0, cw, ch);
+            const type = file.type === "image/png" ? "image/png" : "image/jpeg";
+            cb(canvas.toDataURL(type, 0.85));
+          } catch (e) { cb(reader.result); }  // canvas blocked (e.g. headless) — keep original
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    host.appendChild(DOM.el("h3", null, "Explanation blocks"));
+    host.appendChild(DOM.el("p", { class: "le-note", style: "margin:0 0 8px" },
+      "Shown to students in order. Code blocks appear as a code window; images need alt text."));
+
+    const list = DOM.el("div");
+    host.appendChild(list);
+
+    function move(i, d) {
+      const j = i + d;
+      if (j < 0 || j >= p.blocks.length) return;
+      const t = p.blocks[i]; p.blocks[i] = p.blocks[j]; p.blocks[j] = t;
+      onChange(); redraw();
+    }
+
+    function redraw() {
+      list.innerHTML = "";
+      if (!p.blocks.length) {
+        list.appendChild(DOM.el("p", { class: "le-empty-hint" }, "No blocks yet — add one below."));
+      }
+      p.blocks.forEach((b, i) => {
+        const card = DOM.el("div", { style: "border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px" });
+        const head = DOM.el("div", { style: "display:flex;align-items:center;gap:6px;margin-bottom:6px" });
+        const label = b.kind === "code" ? "Code" : b.kind === "image" ? "Image" : "Text";
+        head.appendChild(DOM.el("span", { style: "font-weight:700;font-size:.85em;flex:1" }, label));
+        const up = DOM.button("↑", () => move(i, -1), "icon"); up.title = "Move up";
+        const down = DOM.button("↓", () => move(i, 1), "icon"); down.title = "Move down";
+        const del = DOM.button("🗑", () => { p.blocks.splice(i, 1); onChange(); redraw(); }, "icon");
+        del.title = "Remove block"; del.classList.add("le-line-del");
+        head.appendChild(up); head.appendChild(down); head.appendChild(del);
+        card.appendChild(head);
+
+        if (b.kind === "code") {
+          DOM.codeField(card, b.code || "", v => { b.code = v; onChange(); }, { lineNumbers: true, language: "python" });
+          const note = DOM.el("textarea", { class: "le-instr", rows: "2", placeholder: "Note (optional) — what this code does and why" });
+          note.value = b.note || "";
+          note.addEventListener("input", () => { b.note = note.value; onChange(); });
+          card.appendChild(note);
+        } else if (b.kind === "image") {
+          // Upload (inlined as a data URI) or paste a URL. Upload is the easy
+          // path — no hosting needed and the image travels with the pack.
+          const upRow = DOM.el("div", { style: "display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px" });
+          const file = DOM.el("input", { type: "file", accept: "image/*", class: "le-img-file", style: "display:none" });
+          const upBtn = DOM.button("⬆ Upload image", () => file.click(), "ghost");
+          const status = DOM.el("span", { class: "le-note", style: "font-size:.85em" });
+          file.addEventListener("change", () => {
+            const f = file.files && file.files[0];
+            if (!f) return;
+            status.textContent = "Processing…";
+            readImageScaled(f, function (dataUrl, err) {
+              if (err || !dataUrl) { status.textContent = err || "Upload failed."; return; }
+              b.src = dataUrl; status.textContent = "Image embedded.";
+              if (!b.alt) b.alt = (f.name || "").replace(/\.[^.]+$/, "");
+              onChange(); redraw();
+            });
+            file.value = "";
+          });
+          upRow.appendChild(upBtn); upRow.appendChild(file); upRow.appendChild(status);
+          card.appendChild(upRow);
+
+          if (b.src) {
+            const prev = DOM.el("img", { class: "le-img-preview", src: b.src, alt: "", style: "max-height:90px;max-width:100%;border-radius:8px;border:1px solid var(--border);display:block;margin-bottom:6px" });
+            card.appendChild(prev);
+            const clear = DOM.button("Remove image", () => { b.src = ""; onChange(); redraw(); }, "ghost");
+            clear.classList.add("le-line-del");
+            card.appendChild(clear);
+          }
+
+          const src = DOM.el("input", { type: "text", class: "le-line-input", spellcheck: "false", autocomplete: "off", placeholder: "…or paste an image URL / data URI" });
+          src.value = b.src || ""; src.addEventListener("input", () => { b.src = src.value; onChange(); });
+          const alt = DOM.el("input", { type: "text", class: "le-line-input", spellcheck: "false", autocomplete: "off", placeholder: "Alt text (required for accessibility)" });
+          alt.value = b.alt || ""; alt.addEventListener("input", () => { b.alt = alt.value; onChange(); });
+          const cap = DOM.el("input", { type: "text", class: "le-line-input", spellcheck: "false", autocomplete: "off", placeholder: "Caption (optional)" });
+          cap.value = b.caption || ""; cap.addEventListener("input", () => { b.caption = cap.value; onChange(); });
+          card.appendChild(src); card.appendChild(alt); card.appendChild(cap);
+        } else {
+          const ta = DOM.el("textarea", { class: "le-instr", rows: "3", placeholder: "Explanatory text" });
+          ta.value = b.text || ""; ta.addEventListener("input", () => { b.text = ta.value; onChange(); });
+          card.appendChild(ta);
+        }
+        list.appendChild(card);
+      });
+    }
+    redraw();
+
+    const addRow = DOM.el("div", { style: "display:flex;gap:8px;flex-wrap:wrap" });
+    addRow.appendChild(DOM.button("+ Text", () => { p.blocks.push({ kind: "text", text: "" }); onChange(); redraw(); }, "ghost"));
+    addRow.appendChild(DOM.button("+ Code", () => { p.blocks.push({ kind: "code", code: "", note: "" }); onChange(); redraw(); }, "ghost"));
+    addRow.appendChild(DOM.button("+ Image", () => { p.blocks.push({ kind: "image", src: "", alt: "", caption: "" }); onChange(); redraw(); }, "ghost"));
+    host.appendChild(addRow);
   };
 
   /* testing: the teacher writes the function in a code box, marking each test
