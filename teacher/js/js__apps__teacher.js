@@ -18,6 +18,11 @@
   let currentEditId = "__meta__";
   let saveTimer = null;
   let saveState = "saved";
+  // Backend mode (hosted + signed in): packs live in the DB, autosaved via the
+  // API. backendMode is decided in init() by probing /auth/me; offline / the
+  // single-file build stay on the legacy localStorage path.
+  let backendMode = false;
+  let packVisibility = "unlisted";
 
   /* ---- Draft save ---- */
   function saveDraft(immediate) {
@@ -29,6 +34,7 @@
     saveTimer = setTimeout(writeDraft, 800);
   }
   function writeDraft() {
+    if (backendMode) { serverSave(); return; }
     Pack.touch(pack);
     const drafts = Storage.get("pyquiz.v1.teacher.drafts") || {};
     drafts[pack.id] = pack;
@@ -38,6 +44,39 @@
     saveState = ok ? "saved" : "unavailable";
     updateSaveStatus();
   }
+  /* Autosave to the DB. On failure (connectivity / closing the tab mid-save)
+     buffer the pack locally against the server version it was based on, so the
+     next open can recover it — UNLESS the server has since moved on. */
+  // Set once a 409 is seen: a concurrent edit changed the pack, so we stop
+  // autosaving to avoid clobbering the newer copy until the teacher reloads.
+  let saveLocked = false;
+  function serverSave() {
+    if (!Server.packId || !pack || saveLocked) return;
+    Pack.touch(pack);
+    saveState = "saving"; updateSaveStatus();
+    Server.savePack(Server.packId, pack, packVisibility, Server.lastUpdatedAt).then(function (meta) {
+      Server.lastUpdatedAt = (meta && meta.updated_at) || Server.lastUpdatedAt;
+      dropPending(Server.packId);
+      saveState = "saved"; updateSaveStatus();
+    }).catch(function (e) {
+      if (e && e.status === 409) { handleStaleConflict(); return; }
+      writePending(Server.packId, pack, Server.lastUpdatedAt);
+      saveState = "offline"; updateSaveStatus();
+    });
+  }
+
+  /* The pack was changed elsewhere since we loaded it. Do NOT overwrite the
+     newer server copy and do NOT lose the teacher's work: stash their edits in
+     a dedicated conflict draft (NOT the offline-replay pending buffer, which
+     would auto-drop on the now-advanced token), stop further autosaves and tell
+     them to reload — the next open offers to restore the draft. */
+  function handleStaleConflict() {
+    saveLocked = true;
+    if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+    writeConflictDraft(Server.packId, pack);
+    saveState = "unsaved"; updateSaveStatus();
+    showBanner("This pack was changed somewhere else, so saving is paused to avoid overwriting that newer version. Your recent edits are kept on this device — reload the page to continue from the latest copy and restore them.", true);
+  }
   function updateSaveStatus() {
     const el = document.getElementById("save-status");
     if (!el) return;
@@ -45,7 +84,18 @@
     if (saveState === "saved") el.textContent = S.saved;
     else if (saveState === "saving") { el.textContent = S.saving; el.classList.add("saving"); }
     else if (saveState === "unsaved") { el.textContent = S.unsaved; el.classList.add("unsaved"); }
+    else if (saveState === "offline") { el.textContent = "Saved on this device — will sync"; el.classList.add("unsaved"); }
     else el.textContent = S.storageUnavailable;
+    renderLastUpdated();
+  }
+  function renderLastUpdated() {
+    const el = document.getElementById("last-updated");
+    if (!el) return;
+    const iso = Server.lastUpdatedAt || (pack && pack.updated_at) || null;
+    const d = iso ? new Date(iso) : null;
+    if (!d || isNaN(d.getTime())) { el.textContent = ""; return; }
+    el.textContent = "Last updated: " + d.toLocaleString("en-GB",
+      { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
   }
 
   /* ---- Refresh ---- */
@@ -521,6 +571,25 @@
      would, whichever way the tool is run. */
   const Server = {
     enabled: (location.protocol === "http:" || location.protocol === "https:"),
+    packId: null,          // the universal DB id of the open pack
+    lastUpdatedAt: null,   // server updated_at — the autosave concurrency token
+    async _json(path, opts) {
+      const r = await fetch("/api/v1" + path, Object.assign({ cache: "no-cache" }, opts || {}));
+      if (!r.ok) { const e = new Error("HTTP " + r.status); e.status = r.status; throw e; }
+      return r.json();
+    },
+    me() { return this._json("/auth/me"); },
+    createPack(content, visibility) {
+      return this._json("/packs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pack: content, visibility: visibility }) });
+    },
+    loadPack(id) { return this._json("/packs/" + encodeURIComponent(id)); },
+    savePack(id, content, visibility, expectedUpdatedAt) {
+      const body = { pack: content, visibility: visibility };
+      // Optimistic-concurrency token: a stale value is refused with 409 so a
+      // concurrent edit elsewhere is never silently overwritten.
+      if (expectedUpdatedAt) body.expected_updated_at = expectedUpdatedAt;
+      return this._json("/packs/" + encodeURIComponent(id), { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    },
     async previewMark(act, resp) {
       const r = await fetch("/api/v1/preview/mark", {
         method: "POST",
@@ -533,6 +602,46 @@
     }
   };
   PyQuiz.Server = Server;
+
+  /* Resilience buffer (localStorage) for autosaves that couldn't reach the DB.
+     Each entry stores the pack and the server version it was based on, keyed by
+     DB pack id. Reconciled on the next open. */
+  const PENDING_KEY = "pyquiz.v1.teacher.pending";
+  function readPending(id) { try { return (JSON.parse(localStorage.getItem(PENDING_KEY) || "{}"))[id] || null; } catch (e) { return null; } }
+  function writePending(id, content, base) {
+    try { const m = JSON.parse(localStorage.getItem(PENDING_KEY) || "{}"); m[id] = { pack: content, base: base || null, ts: new Date().toISOString() }; localStorage.setItem(PENDING_KEY, JSON.stringify(m)); } catch (e) {}
+  }
+  function dropPending(id) { try { const m = JSON.parse(localStorage.getItem(PENDING_KEY) || "{}"); delete m[id]; localStorage.setItem(PENDING_KEY, JSON.stringify(m)); } catch (e) {} }
+
+  /* Conflict drafts are SEPARATE from the offline-replay pending buffer above.
+     When a save is refused with 409 (the pack moved on elsewhere) we cannot
+     replay against the now-stale token, so reconcilePending would drop it. We
+     instead stash the conflicted content here, keyed by pack id, and surface a
+     non-destructive "Restore" affordance on the next open of that pack. This is
+     never auto-dropped on a base mismatch — only the teacher clears it (by
+     restoring, by saving fresh content or by dismissing). */
+  const CONFLICT_KEY = "pyquiz.v1.teacher.conflict";
+  function readConflictDraft(id) { try { return (JSON.parse(localStorage.getItem(CONFLICT_KEY) || "{}"))[id] || null; } catch (e) { return null; } }
+  function writeConflictDraft(id, content) {
+    try { const m = JSON.parse(localStorage.getItem(CONFLICT_KEY) || "{}"); m[id] = { pack: content, ts: new Date().toISOString() }; localStorage.setItem(CONFLICT_KEY, JSON.stringify(m)); } catch (e) {}
+  }
+  function dropConflictDraft(id) { try { const m = JSON.parse(localStorage.getItem(CONFLICT_KEY) || "{}"); delete m[id]; localStorage.setItem(CONFLICT_KEY, JSON.stringify(m)); } catch (e) {} }
+
+  /* After loading a pack from the DB, recover any buffered offline edits — but
+     only if the server hasn't advanced since they were made (a newer server
+     copy, e.g. edited on another machine, wins and the stale buffer is dropped
+     without overwriting it). */
+  async function reconcilePending() {
+    const pend = readPending(Server.packId);
+    if (!pend) return;
+    if (pend.base && pend.base === Server.lastUpdatedAt) {
+      try {
+        const meta = await Server.savePack(Server.packId, pend.pack, packVisibility, pend.base);
+        pack = pend.pack; Server.lastUpdatedAt = (meta && meta.updated_at) || Server.lastUpdatedAt;
+      } catch (e) { return; }  // still offline (or now stale) — keep the buffer for next time
+    }
+    dropPending(Server.packId);
+  }
 
   function previewMarkActivity(act, resp) {
     if (Server.enabled) return Server.previewMark(act, resp).catch(() => Marker.mark(act, resp));
@@ -1932,6 +2041,15 @@
     wrap.appendChild(DOM.el("p", { class: "activity-instructions" }, "These details appear at the top of the student tool and identify the pack on export."));
 
     const sec = DOM.el("div", { class: "form-section" });
+    // Visibility (hosted only): a Public / Unlisted / Private segmented control,
+    // at the very top of the pack details.
+    if (backendMode) {
+      DOM.field(sec, "Visibility", "radio", packVisibility, v => { packVisibility = v; saveDraft(); }, [
+        ["public", "Public"], ["unlisted", "Unlisted"], ["private", "Private"]
+      ]);
+      sec.appendChild(DOM.el("p", { class: "form-hint" },
+        "Public: listed in the catalogue and shareable. Unlisted: shareable by code or link, not listed. Private: only you can see it."));
+    }
     DOM.field(sec, "Title", "text", pack.title, v => { pack.title = v; saveDraft(); document.getElementById("pack-title").textContent = v || "Untitled pack"; });
     // Description is prose, not code — render in a normal (non-monospace) font.
     DOM.field(sec, "Description", "textarea", pack.description, v => { pack.description = v; saveDraft(); }, { prose: true, rows: 3 });
@@ -1951,11 +2069,6 @@
     DOM.field(setSec, "Show solutions after", "select", pack.settings.show_solutions_after, v => { pack.settings.show_solutions_after = v; saveDraft(); }, [
       ["submission", "Submission"], ["correct_only", "Only when correct"], ["never", "Never"]
     ]);
-    DOM.field(setSec, "Show Python runner", "select", pack.settings.show_runner_after || "correct", v => { pack.settings.show_runner_after = v; saveDraft(); }, [
-      ["correct", "After a correct answer (default)"],
-      ["always", "After every check (right or wrong)"],
-      ["never", "Never"]
-    ]);
     DOM.field(setSec, "Pass threshold (0–1)", "number", pack.settings.pass_threshold, v => { pack.settings.pass_threshold = Math.max(0, Math.min(1, parseFloat(v) || 0)); saveDraft(); });
     DOM.field(setSec, "Shuffle activities", "checkbox", pack.settings.shuffle, v => { pack.settings.shuffle = v; saveDraft(); });
     wrap.appendChild(setSec);
@@ -1970,9 +2083,9 @@
     if (!props) return;
     const pane = DOM.el("div", { class: "properties-pane" });
 
-    // Header: "Properties" label + activity actions.
+    // The panel already has a "Properties" title in its header; this row just
+    // carries the activity actions (reorder / duplicate / delete).
     const head = DOM.el("div", { class: "properties-head" });
-    head.appendChild(DOM.el("h2", null, "Properties"));
     const actions = DOM.el("div", { class: "props-actions" });
     const idx = pack.activities.indexOf(act);
     const upBtn = DOM.button("↑", () => { if (Pack.moveActivity(pack, act.id, -1)) { saveDraft(); refresh(); } }, "icon");
@@ -2364,9 +2477,7 @@
   function renderMetaProperties(props) {
     if (!props) return;
     const pane = DOM.el("div", { class: "properties-pane" });
-    const head = DOM.el("div", { class: "properties-head" });
-    head.appendChild(DOM.el("h2", null, "Properties"));
-    pane.appendChild(head);
+    // The panel header already says "Properties" — no inner duplicate heading.
     const body = DOM.el("div", { class: "properties-body" });
     pane.appendChild(body);
     props.appendChild(pane);
@@ -2585,6 +2696,11 @@
     if (spc) spc.addEventListener("click", () => setSP(true));
     if (spr) spr.addEventListener("click", () => setSP(false));
     document.getElementById("new-btn").addEventListener("click", () => {
+      if (backendMode) {
+        if (!confirm("Start a new blank pack? It will be saved to your account.")) return;
+        location.href = "/teacher/app?new=1";
+        return;
+      }
       if (!confirm("Start a new blank pack? Anything unexported in the current pack will be lost.")) return;
       pack = Pack.blank();
       currentEditId = "__meta__";
@@ -2605,6 +2721,17 @@
         }
         pack = res.pack;
         if (!pack.id) pack.id = Pack.uid("pack");
+        if (backendMode) {
+          // Imported packs become a new DB pack you own (unlisted), then open
+          // it. On failure DON'T discard the parsed pack: render it, keep it in
+          // the editor and offer a working Retry, mirroring the create path.
+          e.target.value = "";
+          currentEditId = "__meta__";
+          refresh();
+          const ok = await tryImportCreate(pack);
+          if (!ok) offerImportRetry();
+          return;
+        }
         currentEditId = "__meta__";
         saveDraft(true);
         refresh();
@@ -2635,21 +2762,229 @@
   }
 
   /* ---- Init ---- */
-  function init() {
+  /* Show a persistent error in the shared top banner (reused for storage,
+     connectivity and concurrency messages). role="alert" so it's announced. */
+  function showBanner(message, isError) {
+    const b = document.getElementById("storage-banner");
+    if (!b) return;
+    b.hidden = false;
+    b.setAttribute("role", "alert");
+    b.classList.toggle("error", !!isError);
+    // Keep the message in its own node so appended controls (e.g. a Retry
+    // button) survive subsequent updates.
+    let msg = b.querySelector(".banner-msg");
+    if (!msg) { msg = DOM.el("span", { class: "banner-msg" }); b.insertBefore(msg, b.firstChild); }
+    msg.textContent = message;
+  }
+  function showBackendUnreachable() {
+    showBanner("Couldn't reach the server to check you're signed in. Your work isn't being saved — reload to try again. (We won't save to this device while signed in.)", true);
+  }
+
+  async function init() {
     bindTopBar();
-    // The dashboard only exists when hosted by the backend; reveal the link
-    // there and leave it hidden in the offline single-file build.
-    if (Server.enabled) {
-      const dl = document.getElementById("dashboard-link");
-      if (dl) dl.hidden = false;
-    }
     if (Storage.mode() === "memory") {
       const b = document.getElementById("storage-banner");
       if (b) { b.hidden = false; b.textContent = S.storageBannerTeacher; }
     }
+
+    // Backend mode runs ONLY when served as the hosted app (/teacher/app).
+    // Anywhere else — the offline single file, or the jsdom suites loaded at
+    // "/" — stays on the legacy localStorage path, with no network probe.
+    const hostedApp = Server.enabled && location.pathname.indexOf("/teacher/app") === 0;
+    let authed = false;
+    if (hostedApp && typeof fetch === "function") {
+      try {
+        const me = await Promise.race([
+          Server.me(),
+          new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 3000))
+        ]);
+        authed = !!(me && me.teacher);
+      } catch (e) {
+        // A definitive 401 means signed out → bounce to sign-in. Anything else
+        // (timeout, network, 5xx) is inconclusive: a signed-in teacher must NOT
+        // silently fall through to localStorage and lose their work, so show a
+        // retry rather than degrading to the legacy path.
+        if (e && e.status === 401) { location.replace("/teacher"); return; }
+        showBackendUnreachable();
+        return;
+      }
+    }
+
+    backendMode = authed;
+    if (backendMode) {
+      const dl = document.getElementById("dashboard-link"); if (dl) dl.hidden = false;
+      const ex = document.getElementById("export-btn"); if (ex) ex.hidden = true;  // no JSON export in backend mode
+      const ok = await initBackendPack();
+      if (!ok) return;  // redirected to the dashboard or sign-in
+    } else {
+      initLegacyPack();
+    }
+
+    applyLayoutAndPanes();
+    renderTaskListFooter();
+    refresh();
+  }
+
+  /* Backend mode: resolve which pack to open from the query params, talking to
+     the DB. ?id opens an existing pack; ?new / ?load / ?duplicate create a new
+     one the teacher owns (unlisted by default). */
+  async function initBackendPack() {
+    const params = new URLSearchParams(location.search);
+    const id = params.get("id"), wantNew = params.get("new"),
+          wantLoad = params.get("load"), wantDup = params.get("duplicate");
+
+    // Opening an existing pack (?id / ?duplicate): a 403/404 is definitive —
+    // it isn't theirs (or is gone), so message and return to the dashboard.
+    // A network/5xx is inconclusive: bounce back rather than guess "not yours".
+    if (id || wantDup) {
+      try {
+        if (id) {
+          const data = await Server.loadPack(id);
+          pack = data.pack; Server.packId = data.id;
+          Server.lastUpdatedAt = data.updated_at; packVisibility = data.visibility || "unlisted";
+          await reconcilePending();
+          offerConflictRestore(Server.packId);
+        } else {
+          const src = await Server.loadPack(wantDup);
+          const copy = JSON.parse(JSON.stringify(src.pack || {}));
+          copy.id = Pack.uid("pack"); copy.title = (copy.title || "Pack") + " (copy)"; copy.author = "";
+          await createAndOpen(copy);  // may itself fail; handled below
+        }
+      } catch (e) {
+        if (e && e.status === 403) alert("That pack isn't yours.");
+        else if (e && e.status === 404) alert("That pack couldn't be found.");
+        else alert("Couldn't reach the server to open that pack. Please try again.");
+        location.replace("/teacher/dashboard"); return false;
+      }
+    } else if (wantNew || wantLoad) {
+      // Creating a brand-new pack the teacher owns. If the create fails, DON'T
+      // discard their pack or redirect — keep it on screen and let them retry.
+      pack = wantLoad ? (loadBuiltInCopy(wantLoad) || Pack.blank()) : Pack.blank();
+      const created = await tryCreate(pack);
+      if (!created) { offerCreateRetry(); }
+    } else {
+      location.replace("/teacher/dashboard"); return false;
+    }
+
+    currentEditId = "__meta__";
+    // Canonicalise the URL to ?id=<packId> so a refresh reopens the same pack.
+    if (Server.packId && window.history && history.replaceState) {
+      history.replaceState(null, "", location.pathname + "?id=" + encodeURIComponent(Server.packId));
+    }
+    return true;
+  }
+
+  /* Create a new pack on the server, keeping `pack` as-is. Returns true on
+     success; on failure leaves the teacher's content untouched so they can
+     retry. A 403 is the one definitive "can't author" case. */
+  async function tryCreate(content) {
+    try {
+      const meta = await Server.createPack(content, "unlisted");
+      Server.packId = meta.id; Server.lastUpdatedAt = meta.updated_at; packVisibility = "unlisted";
+      return true;
+    } catch (e) {
+      if (e && e.status === 403) {
+        showBanner("You don't have permission to create packs on this account.", true);
+      } else {
+        showBanner("Couldn't save your new pack to the server yet — your work is here. Use Retry to try again.", true);
+      }
+      return false;
+    }
+  }
+
+  /* Create a DB pack from an in-editor import, keeping the parsed `pack` on
+     screen on failure so it can be retried (rather than silently dropped).
+     Returns true on success, where it opens the new pack. A 403 is the one
+     definitive "can't author" case. */
+  async function tryImportCreate(content) {
+    try {
+      const meta = await Server.createPack(content, "unlisted");
+      location.href = "/teacher/app?id=" + encodeURIComponent(meta.id);
+      return true;
+    } catch (e) {
+      if (e && e.status === 403) {
+        showBanner("You don't have permission to create packs on this account, so this import can't be saved.", true);
+      } else {
+        showBanner("Couldn't save the imported pack to the server yet — it's open here. Use Retry to try again.", true);
+      }
+      return false;
+    }
+  }
+
+  /* Add a one-off Retry button to the banner so a failed import can be retried
+     without losing the parsed pack. */
+  function offerImportRetry() {
+    const b = document.getElementById("storage-banner");
+    if (!b || b.querySelector(".banner-retry")) return;
+    const btn = DOM.el("button", { class: "btn banner-retry", style: "margin-left:12px" }, "Retry");
+    btn.addEventListener("click", async function () {
+      btn.disabled = true;
+      const ok = await tryImportCreate(pack);
+      btn.disabled = false;
+      if (ok) { b.hidden = true; b.classList.remove("error"); btn.remove(); }
+    });
+    b.appendChild(btn);
+  }
+
+  /* Add a one-off Retry button to the banner so a failed create can be retried
+     without losing the in-progress pack. */
+  function offerCreateRetry() {
+    const b = document.getElementById("storage-banner");
+    if (!b || b.querySelector(".banner-retry")) return;
+    const btn = DOM.el("button", { class: "btn banner-retry", style: "margin-left:12px" }, "Retry");
+    btn.addEventListener("click", async function () {
+      btn.disabled = true;
+      const ok = await tryCreate(pack);
+      btn.disabled = false;
+      if (ok) {
+        b.hidden = true; b.classList.remove("error"); btn.remove();
+        if (Server.packId && window.history && history.replaceState) {
+          history.replaceState(null, "", location.pathname + "?id=" + encodeURIComponent(Server.packId));
+        }
+      }
+    });
+    b.appendChild(btn);
+  }
+
+  /* If a 409 conflict draft was stashed for this pack, offer a non-destructive
+     "Restore" affordance: the server copy is already loaded, so the teacher can
+     review the latest version and choose to bring back their conflicted edits.
+     Restoring loads the draft into the editor (a subsequent Save sends the
+     fresh token and so succeeds); restoring or dismissing clears the draft. The
+     draft is never dropped automatically. */
+  function offerConflictRestore(id) {
+    if (!id) return;
+    const draft = readConflictDraft(id);
+    if (!draft || !draft.pack) return;
+    const b = document.getElementById("storage-banner");
+    if (!b) return;
+    showBanner("You have unsaved changes from a previous edit that couldn't be saved because this pack had changed elsewhere. You can restore them to review and save again.", false);
+    if (b.querySelector(".banner-restore")) return;
+    const restore = DOM.el("button", { class: "btn banner-restore", style: "margin-left:12px" }, "Restore your unsaved changes");
+    const dismiss = DOM.el("button", { class: "btn banner-dismiss", style: "margin-left:8px" }, "Discard them");
+    restore.addEventListener("click", function () {
+      pack = draft.pack;
+      dropConflictDraft(id);
+      b.hidden = true; b.classList.remove("error"); restore.remove(); dismiss.remove();
+      currentEditId = "__meta__";
+      refresh();
+    });
+    dismiss.addEventListener("click", function () {
+      dropConflictDraft(id);
+      b.hidden = true; b.classList.remove("error"); restore.remove(); dismiss.remove();
+    });
+    b.appendChild(restore); b.appendChild(dismiss);
+  }
+
+  async function createAndOpen(content) {
+    const meta = await Server.createPack(content, "unlisted");
+    pack = content; Server.packId = meta.id;
+    Server.lastUpdatedAt = meta.updated_at; packVisibility = "unlisted";
+  }
+
+  function initLegacyPack() {
+    if (Server.enabled) { const dl = document.getElementById("dashboard-link"); if (dl) dl.hidden = false; }
     const drafts = Storage.get("pyquiz.v1.teacher.drafts") || {};
-    // The dashboard opens packs via query params: ?new (blank), ?draft=<id>
-    // (resume one of mine) or ?load=<builtin-id> (start from a built-in copy).
     const params = new URLSearchParams(location.search);
     const wantDraft = params.get("draft");
     const wantLoad = params.get("load");
@@ -2668,28 +3003,21 @@
       if (lastId && drafts[lastId]) pack = drafts[lastId];
       else { pack = Pack.blank(); saveDraft(true); }
     }
-    // Drop the query string so a refresh won't re-clone or re-blank the pack.
     if ((wantLoad || wantDraft || wantNew) && window.history && history.replaceState) {
       history.replaceState(null, "", location.pathname);
     }
+  }
+
+  function applyLayoutAndPanes() {
     const s = Settings.get();
     if (s.tl === "collapsed") document.getElementById("layout").classList.add("tl-collapsed");
     if (s.sp === "collapsed") document.getElementById("layout").classList.add("sp-collapsed");
-    // Apply persisted pane widths if the user resized them earlier.
     const layout = document.getElementById("layout");
     if (s.tl_width) layout.style.setProperty("--tl-w", s.tl_width + "px");
     if (s.sp_width) layout.style.setProperty("--sp-w", s.sp_width + "px");
-    // Wire the draggable resize handles. Persist new widths into the
-    // shared Settings store so they carry across student/teacher.
     DOM.setupPaneResize({
-      persist: function (key, width) {
-        const patch = {};
-        patch[key] = width;
-        Settings.update(patch);
-      }
+      persist: function (key, width) { const patch = {}; patch[key] = width; Settings.update(patch); }
     });
-    renderTaskListFooter();
-    refresh();
   }
 
   PyQuiz.TeacherApp = { init: init };
